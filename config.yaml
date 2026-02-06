@@ -1,0 +1,107 @@
+# Investment Register Configuration
+
+# General Settings
+base_currency: CAD
+supported_currencies:
+  - CAD
+  - USD
+
+# Entities
+entities:
+  - name: "HoldCo"
+    type: "corporation"
+    description: "Main holding corporation"
+  - name: "Personal"
+    type: "individual"
+    description: "Personal investments"
+
+# Asset Classes
+asset_classes:
+  - name: "Public Equities"
+    code: "PUBLIC_EQUITY"
+    liquid: true
+    has_market_data: true
+  - name: "Private Business"
+    code: "PRIVATE_BUSINESS"
+    liquid: false
+    has_market_data: false
+  - name: "Venture Fund"
+    code: "VENTURE_FUND"
+    liquid: false
+    has_market_data: false
+  - name: "Venture Entity"
+    code: "VENTURE_ENTITY"
+    liquid: false
+    has_market_data: false
+  - name: "Real Estate"
+    code: "REAL_ESTATE"
+    liquid: false
+    has_market_data: false
+  - name: "Gold"
+    code: "GOLD"
+    liquid: true
+    has_market_data: true
+  - name: "Crypto"
+    code: "CRYPTO"
+    liquid: true
+    has_market_data: true
+  - name: "Cash & Equivalents"
+    code: "CASH"
+    liquid: true
+    has_market_data: false
+  - name: "Bonds"
+    code: "BONDS"
+    liquid: true
+    has_market_data: true
+  - name: "Derivatives/Options"
+    code: "DERIVATIVES"
+    liquid: true
+    has_market_data: true
+
+# Benchmarks
+benchmarks:
+  - name: "S&P 500"
+    symbol: "^GSPC"
+    description: "US Large Cap"
+  - name: "NASDAQ"
+    symbol: "^IXIC"
+    description: "US Tech-heavy"
+  - name: "TSX Composite"
+    symbol: "^GSPTSE"
+    description: "Canadian Market"
+
+# Investment Policy Statement (Draft)
+investment_policy:
+  risk_profile: "aggressive"
+  investment_horizon: "mixed"  # cash flow now + generational
+  tax_jurisdiction: "Canada"
+
+  # Target allocation (AI will suggest refinements)
+  target_allocation:
+    PUBLIC_EQUITY: 0.30
+    PRIVATE_BUSINESS: 0.20
+    VENTURE_FUND: 0.15
+    VENTURE_ENTITY: 0.10
+    REAL_ESTATE: 0.10
+    GOLD: 0.05
+    CRYPTO: 0.05
+    CASH: 0.05
+
+  # Risk parameters
+  max_single_position_pct: 0.20
+  max_asset_class_pct: 0.40
+  min_liquidity_pct: 0.15
+
+  # Tax considerations
+  consider_capital_gains_deferral: true
+  tax_loss_harvesting: true
+
+# Market Data Settings
+market_data:
+  provider: "yahoo"  # yahoo, alpha_vantage
+  delay_acceptable: true  # 15-min delay OK
+  crypto_provider: "kraken"
+
+# API Keys (set via environment variables for security)
+# ANTHROPIC_API_KEY - for AI recommendations
+# KRAKEN_API_KEY - for crypto data (optional, public data available)

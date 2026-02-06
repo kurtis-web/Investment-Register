@@ -1,0 +1,41 @@
+# Investment Register - Dependencies
+
+# Web Framework
+streamlit>=1.28.0
+
+# Data Processing
+pandas>=2.0.0
+numpy>=1.24.0
+
+# Financial Calculations
+numpy-financial>=1.0.0
+scipy>=1.10.0
+
+# Market Data
+yfinance>=0.2.30
+krakenex>=2.1.0
+pykrakenapi>=0.3.1
+forex-python>=1.8
+
+# Database
+sqlalchemy>=2.0.0
+
+# Charts
+plotly>=5.17.0
+
+# AI Integration
+anthropic>=0.18.0
+
+# Google Sheets Integration
+gspread>=5.10.0
+google-auth>=2.22.0
+google-auth-oauthlib>=1.0.0
+
+# Utilities
+python-dateutil>=2.8.2
+pytz>=2023.3
+pyyaml>=6.0
+requests>=2.31.0
+
+# For Excel/CSV import
+openpyxl>=3.1.2

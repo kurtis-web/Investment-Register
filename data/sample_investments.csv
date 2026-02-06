@@ -1,0 +1,19 @@
+name,symbol,asset_class,entity,currency,exchange,quantity,cost_basis,current_value,purchase_date,notes
+Royal Bank of Canada,RY,Public Equities,HoldCo,CAD,TSX,500,65000,72500,2022-03-15,Core Canadian bank holding
+Apple Inc.,AAPL,Public Equities,HoldCo,USD,NASDAQ,200,28000,42000,2021-06-20,US tech exposure
+Toronto-Dominion Bank,TD,Public Equities,HoldCo,CAD,TSX,300,24000,26400,2023-01-10,Canadian bank
+Shopify Inc.,SHOP,Public Equities,Personal,CAD,TSX,50,4500,3800,2022-09-01,Canadian tech
+Microsoft Corp,MSFT,Public Equities,HoldCo,USD,NASDAQ,75,22500,31500,2022-04-15,US tech
+Private Tech Company A,,Private Business,HoldCo,CAD,,1,150000,225000,2020-08-01,Series B investment
+Local Restaurant Group,,Private Business,HoldCo,CAD,,1,75000,90000,2021-03-15,25% ownership stake
+VC Fund Alpha 2022,,Venture Fund,HoldCo,USD,,1,100000,115000,2022-01-15,Early stage tech fund
+VC Fund Beta 2023,,Venture Fund,Personal,USD,,1,50000,52000,2023-06-01,Healthcare focused
+StartupCo Series A,,Venture Entity,HoldCo,CAD,,10000,25000,35000,2023-02-28,Direct angel investment
+Tech Startup XYZ,,Venture Entity,HoldCo,USD,,5000,15000,12000,2022-11-15,Pre-seed investment
+Downtown Office Building,,Real Estate,HoldCo,CAD,,1,450000,525000,2019-05-20,Commercial property
+Cottage Property,,Real Estate,Personal,CAD,,1,380000,420000,2020-07-10,Vacation property
+Gold Bullion,GOLD,Gold,HoldCo,CAD,,15,42000,48000,2022-06-01,Physical gold bars - 15 oz
+Bitcoin,BTC,Crypto,Personal,USD,,0.75,22500,52500,2021-01-15,Held on Kraken
+Ethereum,ETH,Crypto,Personal,USD,,5,8500,16250,2021-03-20,Held on Kraken
+Canadian Bonds ETF,XBB,Bonds,HoldCo,CAD,TSX,200,20000,19200,2023-04-01,Fixed income allocation
+High Interest Savings,,Cash & Equivalents,HoldCo,CAD,,1,75000,75000,2024-01-01,Emergency fund
