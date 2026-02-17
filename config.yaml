@@ -102,6 +102,14 @@ market_data:
   delay_acceptable: true  # 15-min delay OK
   crypto_provider: "kraken"
 
+# Google Sheets Integration
+google_sheets:
+  credentials_path: "data/google_credentials.json"
+  sheet_url: ""
+  worksheet_name: ""
+  last_sync_time: null
+  auto_sync_on_load: false
+
 # API Keys (set via environment variables for security)
 # ANTHROPIC_API_KEY - for AI recommendations
 # KRAKEN_API_KEY - for crypto data (optional, public data available)

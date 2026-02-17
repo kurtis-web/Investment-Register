@@ -9,6 +9,7 @@ import plotly.graph_objects as go
 from datetime import datetime, date
 import os
 import sys
+import yaml
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
@@ -16,10 +17,11 @@ from src.database import (
     get_session, get_all_investments, get_all_entities,
     get_investment_by_id, add_investment, add_transaction, Entity
 )
-from src.portfolio import get_portfolio_overview, get_holdings_for_display
+from src.portfolio import get_portfolio_overview, get_holdings_for_display, update_market_prices
 from src.market_data import get_stock_price, get_crypto_price, get_usd_cad_rate
 from src.calculations import format_currency, format_percentage
 from src.styles import apply_dark_theme, COLORS, PLOTLY_LAYOUT, page_header, section_header
+from src.importers import GoogleSheetsImporter
 
 st.set_page_config(page_title="Holdings | Investment Register", page_icon="📈", layout="wide")
 
@@ -27,6 +29,58 @@ st.set_page_config(page_title="Holdings | Investment Register", page_icon="📈"
 apply_dark_theme()
 
 page_header("Holdings", "Detailed view of all investment positions")
+
+# --- Auto-sync from Google Sheets ---
+config_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'config.yaml')
+try:
+    with open(config_path, 'r') as f:
+        _config = yaml.safe_load(f) or {}
+except Exception:
+    _config = {}
+
+_gs_config = _config.get('google_sheets', {})
+
+if _gs_config.get('auto_sync_on_load', False) and _gs_config.get('sheet_url'):
+    _should_sync = True
+    _last_sync = _gs_config.get('last_sync_time')
+    if _last_sync:
+        try:
+            _last_sync_dt = datetime.fromisoformat(_last_sync)
+            _minutes_since = (datetime.now() - _last_sync_dt).total_seconds() / 60
+            if _minutes_since < 15:
+                _should_sync = False
+        except Exception:
+            pass
+
+    if _should_sync:
+        _creds_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data', 'google_credentials.json')
+        if os.path.exists(_creds_path):
+            _gs_importer = GoogleSheetsImporter(credentials_path=_creds_path)
+            _sync_result = _gs_importer.sync_from_sheet()
+            if _sync_result.get('success'):
+                st.toast(
+                    f"Auto-synced: {_sync_result.get('created', 0)} created, "
+                    f"{_sync_result.get('updated', 0)} updated"
+                )
+
+
+# --- Auto-refresh market prices (cached for 15 min) ---
+@st.cache_data(ttl=900, show_spinner=False)
+def _cached_market_refresh():
+    """Refresh market prices, cached for 15 minutes."""
+    _session = get_session()
+    try:
+        result = update_market_prices(_session)
+        return {
+            'updated': result.get('updated', 0),
+            'total': result.get('total', 0),
+            'errors': result.get('errors', []),
+            'timestamp': datetime.now().strftime('%H:%M')
+        }
+    finally:
+        _session.close()
+
+_refresh_result = _cached_market_refresh()
 
 # Filters
 session = get_session()
@@ -49,6 +103,13 @@ try:
     with col3:
         sort_by = st.selectbox("Sort By", ["Value", "Name", "Gain ($)", "Gain (%)", "Weight"])
         sort_map = {"Value": "value", "Name": "name", "Gain ($)": "gain", "Gain (%)": "gain_pct", "Weight": "weight"}
+
+    # Last refreshed indicator
+    if _refresh_result:
+        st.caption(
+            f"Prices last refreshed at {_refresh_result['timestamp']} "
+            f"({_refresh_result['updated']}/{_refresh_result['total']} updated)"
+        )
 
     st.markdown("---")
 

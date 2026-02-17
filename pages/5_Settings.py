@@ -11,8 +11,9 @@ import io
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
+from datetime import datetime
 from src.database import get_session, get_all_investments, get_all_entities, Entity, init_db
-from src.importers import CSVImporter, generate_import_template
+from src.importers import CSVImporter, GoogleSheetsImporter, generate_import_template
 from src.portfolio import get_portfolio_overview, update_market_prices
 from src.styles import apply_dark_theme, COLORS, PLOTLY_LAYOUT, page_header, section_header
 
@@ -152,15 +153,33 @@ try:
 
         st.markdown("---")
 
-        # Google Sheets (placeholder)
+        # Google Sheets Integration
         st.markdown("### Google Sheets Integration")
-        st.info("""
-        To use Google Sheets integration:
-        1. Create a Google Cloud service account
-        2. Download the credentials JSON
-        3. Share your sheet with the service account email
-        4. Upload credentials below
-        """)
+
+        # Load config
+        config_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'config.yaml')
+        try:
+            with open(config_path, 'r') as f:
+                config_data = yaml.safe_load(f) or {}
+        except Exception:
+            config_data = {}
+
+        gs_config = config_data.get('google_sheets', {})
+        creds_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data', 'google_credentials.json')
+
+        # Credentials upload
+        has_credentials = os.path.exists(creds_path)
+        if has_credentials:
+            st.success("Service account credentials are configured.")
+        else:
+            st.info("""
+            To use Google Sheets integration:
+            1. Create a Google Cloud service account
+            2. Enable the Google Sheets API
+            3. Download the credentials JSON
+            4. Share your sheet with the service account email
+            5. Upload credentials below
+            """)
 
         credentials_file = st.file_uploader(
             "Upload Google Service Account Credentials",
@@ -169,8 +188,90 @@ try:
         )
 
         if credentials_file:
-            st.session_state['google_credentials'] = credentials_file.read()
-            st.success("Credentials uploaded (session only)")
+            os.makedirs(os.path.dirname(creds_path), exist_ok=True)
+            with open(creds_path, 'wb') as f:
+                f.write(credentials_file.getbuffer())
+            st.success("Credentials saved to data/google_credentials.json")
+            has_credentials = True
+
+        # Sheet URL and worksheet name
+        sheet_url = st.text_input(
+            "Google Sheet URL",
+            value=gs_config.get('sheet_url', ''),
+            placeholder="https://docs.google.com/spreadsheets/d/...",
+            key="gs_sheet_url"
+        )
+
+        worksheet_name = st.text_input(
+            "Worksheet Name (leave blank for first sheet)",
+            value=gs_config.get('worksheet_name', ''),
+            key="gs_worksheet_name"
+        )
+
+        # Auto-sync toggle
+        auto_sync = st.toggle(
+            "Auto-sync on dashboard load (every 15 min)",
+            value=gs_config.get('auto_sync_on_load', False),
+            key="gs_auto_sync"
+        )
+
+        # Save settings button
+        if st.button("Save Google Sheets Settings", key="save_gs_settings"):
+            config_data.setdefault('google_sheets', {})
+            config_data['google_sheets']['sheet_url'] = sheet_url
+            config_data['google_sheets']['worksheet_name'] = worksheet_name
+            config_data['google_sheets']['auto_sync_on_load'] = auto_sync
+            config_data['google_sheets']['credentials_path'] = 'data/google_credentials.json'
+
+            with open(config_path, 'w') as f:
+                yaml.dump(config_data, f, default_flow_style=False)
+            st.success("Google Sheets settings saved!")
+
+        st.markdown("---")
+
+        # Sync button
+        col_sync, col_status = st.columns([1, 2])
+
+        with col_sync:
+            sync_clicked = st.button(
+                "Sync from Google Sheets",
+                key="sync_gs",
+                disabled=not (has_credentials and sheet_url)
+            )
+
+        with col_status:
+            last_sync = gs_config.get('last_sync_time')
+            if last_sync:
+                try:
+                    last_sync_dt = datetime.fromisoformat(last_sync)
+                    st.caption(f"Last synced: {last_sync_dt.strftime('%Y-%m-%d %H:%M')}")
+                except Exception:
+                    st.caption(f"Last synced: {last_sync}")
+            else:
+                st.caption("Never synced")
+
+        if sync_clicked:
+            with st.spinner("Syncing from Google Sheets..."):
+                importer = GoogleSheetsImporter(credentials_path=creds_path)
+                result = importer.sync_from_sheet(
+                    sheet_url=sheet_url,
+                    worksheet_name=worksheet_name if worksheet_name else None,
+                    session=session
+                )
+
+                if result.get('success'):
+                    st.success(
+                        f"Sync complete: {result.get('created', 0)} created, "
+                        f"{result.get('updated', 0)} updated"
+                    )
+                    if result.get('warnings'):
+                        with st.expander("Warnings"):
+                            for w in result['warnings']:
+                                st.markdown(f"- {w}")
+                else:
+                    st.error("Sync failed")
+                    for error in result.get('errors', []):
+                        st.markdown(f"- {error}")
 
     with tab2:
         st.subheader("Export Data")

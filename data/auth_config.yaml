@@ -1,0 +1,12 @@
+cookie:
+  expiry_days: 30
+  key: wealth_os_auth_key_random_string_12345
+  name: wealth_os_auth
+credentials:
+  usernames:
+    admin:
+      email: admin@example.com
+      name: Administrator
+      password: $2b$12$xO8zfdpGTs3u7JSDrSMi5uFE/KSKA96UyKNQDai0RPkIGnhx2BluS
+preauthorized:
+  emails: []

@@ -5,6 +5,7 @@ Supports CSV/Excel import and Google Sheets integration.
 
 import os
 import pandas as pd
+import yaml
 from datetime import datetime, date
 from typing import Dict, List, Optional, Tuple
 import json
@@ -14,6 +15,8 @@ from .database import (
     add_investment, add_transaction, add_valuation,
     get_all_entities, get_investment_by_symbol
 )
+
+CONFIG_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'config.yaml')
 
 
 class CSVImporter:
@@ -305,6 +308,117 @@ class CSVImporter:
             'errors': self.errors
         }
 
+    def sync_investments(self, file_path: str, session=None) -> Dict:
+        """
+        Sync investments from CSV/Excel file using upsert logic.
+        Matches existing investments by symbol (or name+entity) and updates them
+        instead of skipping duplicates. Creates new records for unmatched rows.
+
+        Returns:
+            Sync results with created/updated counts and errors
+        """
+        close_session = False
+        if session is None:
+            session = get_session()
+            close_session = True
+
+        df, issues = self.preview_investments(file_path)
+
+        if self.errors:
+            return {'success': False, 'errors': self.errors, 'created': 0, 'updated': 0}
+
+        entities = {e.name: e.id for e in get_all_entities(session)}
+
+        created = 0
+        updated = 0
+
+        try:
+            for idx, row in df.iterrows():
+                try:
+                    entity_name = row.get('entity', 'HoldCo')
+                    if entity_name not in entities:
+                        self.warnings.append(f"Row {idx+1}: Unknown entity '{entity_name}', using HoldCo")
+                        entity_name = 'HoldCo'
+
+                    entity_id = entities.get(entity_name, entities.get('HoldCo'))
+
+                    # Try to find existing investment by symbol first, then by name+entity
+                    existing = None
+                    symbol = row.get('symbol')
+                    if symbol and pd.notna(symbol) and str(symbol).strip():
+                        existing = get_investment_by_symbol(session, str(symbol).strip())
+
+                    if existing is None:
+                        name = row.get('name', '')
+                        existing = session.query(Investment).filter(
+                            Investment.name == name,
+                            Investment.entity_id == entity_id
+                        ).first()
+
+                    if existing:
+                        # Update existing investment
+                        for field in ['quantity', 'cost_basis', 'cost_per_unit', 'current_value', 'current_price']:
+                            val = row.get(field)
+                            if val is not None and not (isinstance(val, float) and pd.isna(val)):
+                                setattr(existing, field, val)
+
+                        if row.get('asset_class'):
+                            existing.asset_class = row['asset_class']
+                        if row.get('currency'):
+                            existing.currency = row['currency']
+                        if row.get('exchange') and pd.notna(row.get('exchange')):
+                            existing.exchange = row['exchange']
+                        if row.get('notes') and pd.notna(row.get('notes')):
+                            existing.notes = row['notes']
+                        if row.get('purchase_date') and pd.notna(row.get('purchase_date')):
+                            existing.purchase_date = row['purchase_date']
+
+                        existing.data_source = 'google_sheets'
+                        existing.updated_at = datetime.utcnow()
+                        updated += 1
+                    else:
+                        # Create new investment
+                        investment = Investment(
+                            name=row['name'],
+                            symbol=row.get('symbol') if pd.notna(row.get('symbol', None)) else None,
+                            asset_class=row.get('asset_class', 'Public Equities'),
+                            entity_id=entity_id,
+                            currency=row.get('currency', 'CAD'),
+                            exchange=row.get('exchange') if pd.notna(row.get('exchange', None)) else None,
+                            quantity=row.get('quantity', 0),
+                            cost_basis=row.get('cost_basis', 0),
+                            cost_per_unit=row.get('cost_per_unit', 0),
+                            current_value=row.get('current_value', row.get('cost_basis', 0)),
+                            current_price=row.get('current_price', row.get('cost_per_unit', 0)),
+                            purchase_date=row.get('purchase_date'),
+                            notes=row.get('notes') if pd.notna(row.get('notes', None)) else None,
+                            data_source='google_sheets'
+                        )
+                        session.add(investment)
+                        created += 1
+
+                except Exception as e:
+                    self.errors.append(f"Row {idx+1}: {str(e)}")
+
+            session.commit()
+
+        except Exception as e:
+            session.rollback()
+            self.errors.append(f"Sync failed: {str(e)}")
+            return {'success': False, 'errors': self.errors, 'created': 0, 'updated': 0}
+
+        finally:
+            if close_session:
+                session.close()
+
+        return {
+            'success': True,
+            'created': created,
+            'updated': updated,
+            'warnings': self.warnings,
+            'errors': self.errors
+        }
+
     def preview_transactions(self, file_path: str) -> Tuple[pd.DataFrame, List[str]]:
         """Preview transactions from a CSV/Excel file."""
         self.errors = []
@@ -509,6 +623,66 @@ class GoogleSheetsImporter:
             return importer.import_investments(temp_path, session)
         else:
             return importer.import_transactions(temp_path, session)
+
+    def sync_from_sheet(self, sheet_url: str = None, worksheet_name: str = None, session=None) -> Dict:
+        """
+        Sync investments from Google Sheet using upsert logic.
+        Reads sheet URL and worksheet from config if not provided.
+        Updates last_sync_time in config on success.
+
+        Returns:
+            Sync results with created/updated counts and errors
+        """
+        # Load config for defaults
+        try:
+            with open(CONFIG_PATH, 'r') as f:
+                config = yaml.safe_load(f) or {}
+        except Exception:
+            config = {}
+
+        gs_config = config.get('google_sheets', {})
+
+        if not sheet_url:
+            sheet_url = gs_config.get('sheet_url', '')
+        if not worksheet_name:
+            worksheet_name = gs_config.get('worksheet_name', '') or None
+
+        if not sheet_url:
+            return {'success': False, 'errors': ['No Google Sheet URL configured'], 'created': 0, 'updated': 0}
+
+        # Use credentials from config if not set
+        if not self.credentials_path:
+            self.credentials_path = gs_config.get('credentials_path', '')
+            if self.credentials_path and not os.path.isabs(self.credentials_path):
+                self.credentials_path = os.path.join(os.path.dirname(CONFIG_PATH), self.credentials_path)
+
+        if not self.credentials_path or not os.path.exists(self.credentials_path):
+            return {'success': False, 'errors': ['Google credentials file not found'], 'created': 0, 'updated': 0}
+
+        # Read sheet data
+        df = self.get_sheet_data(sheet_url, worksheet_name)
+
+        if df is None:
+            return {'success': False, 'errors': ['Failed to read Google Sheet'], 'created': 0, 'updated': 0}
+
+        # Save to temp CSV and delegate to sync_investments
+        temp_path = '/tmp/gsheet_sync.csv'
+        df.to_csv(temp_path, index=False)
+
+        importer = CSVImporter()
+        result = importer.sync_investments(temp_path, session)
+
+        # Update last_sync_time in config on success
+        if result.get('success'):
+            config.setdefault('google_sheets', {})
+            config['google_sheets']['last_sync_time'] = datetime.now().isoformat()
+            try:
+                with open(CONFIG_PATH, 'w') as f:
+                    yaml.dump(config, f, default_flow_style=False)
+            except Exception:
+                pass
+
+        return result
 
 
 def generate_import_template(template_type: str = 'investments') -> pd.DataFrame:
