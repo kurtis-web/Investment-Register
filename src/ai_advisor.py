@@ -305,6 +305,96 @@ Please draft a complete IPS including:
 
         return self._call_claude(system_prompt, user_prompt, max_tokens=4000)
 
+    def get_risk_register_analysis(self, risks_data: List[Dict], portfolio_data: Dict) -> Optional[str]:
+        """Analyze the risk register and provide insights."""
+        system_prompt = """You are a risk management expert for a Canadian single family office.
+You analyze risk registers and provide actionable insights on:
+- Overall risk posture and trends
+- Gaps in risk identification
+- Prioritization of risks requiring immediate attention
+- Correlation between risks that could compound
+- Comparison to typical family office risk profiles
+Be specific, structured, and professional. Use markdown formatting."""
+
+        risks_text = self._format_risks_for_ai(risks_data)
+        portfolio_summary = self._format_portfolio_for_ai(portfolio_data)
+
+        user_prompt = f"""Analyze this risk register for a family office:
+
+{risks_text}
+
+Portfolio Context:
+{portfolio_summary}
+
+Please provide:
+1. Overall Risk Posture Assessment (2-3 sentences)
+2. Top 3 Priority Risks Requiring Immediate Attention
+3. Gaps in Risk Coverage (what risks are missing?)
+4. Risk Correlations (which risks could compound each other?)
+5. Recommendations for Risk Reduction
+6. Suggested Review Schedule Adjustments
+"""
+
+        return self._call_claude(system_prompt, user_prompt, max_tokens=3000)
+
+    def get_mitigation_suggestions(self, risk_data: Dict) -> Optional[str]:
+        """Get AI-suggested mitigation strategies for a specific risk."""
+        system_prompt = """You are a risk mitigation specialist for high-net-worth families and family offices.
+Provide specific, actionable mitigation strategies that are practical to implement.
+Consider insurance, legal structures, operational controls, and contingency planning.
+Use markdown formatting."""
+
+        user_prompt = f"""Suggest mitigation strategies for this risk:
+
+Risk: {risk_data.get('title', 'Unknown')}
+Category: {risk_data.get('category', 'Unknown')}
+Description: {risk_data.get('description', 'No description')}
+Likelihood: {risk_data.get('likelihood', 0)} (0=Not at all, 5=Almost certain)
+Impact: {risk_data.get('impact', 0)} (0=No impact, 5=Extreme)
+Risk Score: {risk_data.get('risk_score', 0)}
+Current Status: {risk_data.get('status', 'Identified')}
+Current Mitigation Plan: {risk_data.get('mitigation_plan', 'None')}
+Current Mitigation Actions: {risk_data.get('mitigation_actions', 'None')}
+
+Please provide:
+1. Recommended Mitigation Strategies (3-5 specific actions)
+2. Preventive Controls (to reduce likelihood)
+3. Detective Controls (to identify early)
+4. Response Plan (if the risk materializes)
+5. Estimated Residual Risk After Mitigation
+6. Suggested Review Frequency
+"""
+
+        return self._call_claude(system_prompt, user_prompt, max_tokens=2000)
+
+    def _format_risks_for_ai(self, risks_data: List[Dict]) -> str:
+        """Format risk data for AI consumption."""
+        lines = [f"Total Risks: {len(risks_data)}", ""]
+
+        categories = {}
+        for r in risks_data:
+            cat = r.get('category', 'Unknown')
+            categories[cat] = categories.get(cat, 0) + 1
+
+        lines.append("By Category:")
+        for cat, count in sorted(categories.items()):
+            lines.append(f"  - {cat}: {count}")
+
+        lines.append("")
+        lines.append("Risk Details (sorted by score, highest first):")
+        sorted_risks = sorted(risks_data, key=lambda x: x.get('risk_score', 0), reverse=True)
+
+        for r in sorted_risks:
+            lines.append(
+                f"  - [{r.get('risk_score', 0)}] {r.get('title', 'Unknown')} "
+                f"(L:{r.get('likelihood', '?')} x I:{r.get('impact', '?')}) "
+                f"[{r.get('status', '?')}] [{r.get('category', '?')}]"
+            )
+            if r.get('mitigation_plan'):
+                lines.append(f"    Mitigation: {r['mitigation_plan'][:100]}")
+
+        return "\n".join(lines)
+
     def _format_portfolio_for_ai(self, portfolio_data: Dict) -> str:
         """Format portfolio data for AI consumption."""
         summary = portfolio_data.get('summary', {})
@@ -378,6 +468,14 @@ def suggest_target_allocation(portfolio_data: Dict) -> Optional[str]:
 
 def draft_investment_policy_statement(portfolio_data: Dict, preferences: Dict = None) -> Optional[str]:
     return get_advisor().draft_investment_policy_statement(portfolio_data, preferences)
+
+
+def get_risk_register_analysis(risks_data: List[Dict], portfolio_data: Dict) -> Optional[str]:
+    return get_advisor().get_risk_register_analysis(risks_data, portfolio_data)
+
+
+def get_mitigation_suggestions(risk_data: Dict) -> Optional[str]:
+    return get_advisor().get_mitigation_suggestions(risk_data)
 
 
 def is_ai_available() -> bool:

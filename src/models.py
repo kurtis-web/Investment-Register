@@ -191,6 +191,7 @@ class Entity(Base):
     accounts = relationship("Account", back_populates="entity")
     investments = relationship("Investment", back_populates="entity")
     cashflow_items = relationship("CashflowItem", back_populates="entity")
+    risks = relationship("Risk", back_populates="entity")
     children = relationship("Entity", backref="parent", remote_side=[id])
 
 
@@ -692,6 +693,51 @@ class Benchmark(Base):
     __table_args__ = (
         UniqueConstraint('symbol', 'date', name='uq_benchmark_symbol_date'),
     )
+
+
+class Risk(Base):
+    """Risk register entry."""
+    __tablename__ = 'risks'
+
+    id = Column(Integer, primary_key=True)
+
+    # Core fields
+    title = Column(String(300), nullable=False)
+    description = Column(Text)
+    category = Column(String(50), nullable=False)
+
+    # Entity linkage
+    entity_id = Column(Integer, ForeignKey('entities.id'), nullable=True)
+
+    # Optional linkage to investments
+    investment_id = Column(Integer, ForeignKey('investments.id'), nullable=True)
+
+    # Risk owner
+    risk_owner = Column(String(200))
+
+    # Assessment scales (0-5)
+    likelihood = Column(Integer, default=0)
+    impact = Column(Integer, default=0)
+    risk_score = Column(Integer, default=0)
+
+    # Status
+    status = Column(String(50), default='Identified')
+
+    # Mitigation
+    mitigation_plan = Column(Text)
+    mitigation_actions = Column(Text)
+
+    # Review schedule
+    review_frequency = Column(String(50))
+    next_review_date = Column(Date)
+
+    # Timestamps
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # Relationships
+    entity = relationship("Entity", back_populates="risks")
+    investment = relationship("Investment")
 
 
 # ============================================================================

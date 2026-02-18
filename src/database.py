@@ -209,6 +209,51 @@ class PortfolioSnapshot(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
+class Risk(Base):
+    """Risk register entry."""
+    __tablename__ = 'risks'
+
+    id = Column(Integer, primary_key=True)
+
+    # Core fields
+    title = Column(String(300), nullable=False)
+    description = Column(Text)
+    category = Column(String(50), nullable=False)  # Financial, Operational, Legal, etc.
+
+    # Entity linkage
+    entity_id = Column(Integer, ForeignKey('entities.id'), nullable=True)
+
+    # Optional linkage to investments
+    investment_id = Column(Integer, ForeignKey('investments.id'), nullable=True)
+
+    # Risk owner
+    risk_owner = Column(String(200))
+
+    # Assessment scales (0-5)
+    likelihood = Column(Integer, default=0)
+    impact = Column(Integer, default=0)
+    risk_score = Column(Integer, default=0)  # likelihood * impact
+
+    # Status
+    status = Column(String(50), default='Identified')
+
+    # Mitigation
+    mitigation_plan = Column(Text)
+    mitigation_actions = Column(Text)
+
+    # Review schedule
+    review_frequency = Column(String(50))  # Monthly, Quarterly, Semi-annually, Annually
+    next_review_date = Column(Date)
+
+    # Timestamps
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # Relationships
+    entity = relationship("Entity")
+    investment = relationship("Investment")
+
+
 # Database operations
 def init_db():
     """Initialize the database"""
@@ -222,6 +267,9 @@ def init_db():
             session.add(Entity(name="HoldCo", entity_type="corporation", description="Main holding corporation"))
             session.add(Entity(name="Personal", entity_type="individual", description="Personal investments"))
             session.commit()
+
+        # Seed risk register data
+        seed_risk_data(session)
     finally:
         session.close()
 
@@ -421,6 +469,124 @@ def get_portfolio_summary(session) -> dict:
         'by_asset_class': by_asset_class,
         'investment_count': len(investments)
     }
+
+
+# Risk Register CRUD
+def get_all_risks(session, include_closed=False) -> List[Risk]:
+    """Get all risks, optionally excluding Closed."""
+    query = session.query(Risk)
+    if not include_closed:
+        query = query.filter(Risk.status != 'Closed')
+    return query.order_by(Risk.risk_score.desc()).all()
+
+
+def add_risk(session, **kwargs) -> Risk:
+    """Add a new risk."""
+    risk = Risk(**kwargs)
+    risk.risk_score = (risk.likelihood or 0) * (risk.impact or 0)
+    session.add(risk)
+    session.commit()
+    return risk
+
+
+def update_risk(session, risk_id: int, **kwargs) -> Optional[Risk]:
+    """Update an existing risk."""
+    risk = session.query(Risk).filter(Risk.id == risk_id).first()
+    if not risk:
+        return None
+    for key, value in kwargs.items():
+        setattr(risk, key, value)
+    risk.risk_score = (risk.likelihood or 0) * (risk.impact or 0)
+    session.commit()
+    return risk
+
+
+def delete_risk(session, risk_id: int):
+    """Delete a risk."""
+    risk = session.query(Risk).filter(Risk.id == risk_id).first()
+    if risk:
+        session.delete(risk)
+        session.commit()
+
+
+def seed_risk_data(session):
+    """Seed initial risk register data from Airtable screenshot."""
+    if session.query(Risk).count() > 0:
+        return
+
+    from datetime import timedelta
+    today = date.today()
+
+    risks = [
+        Risk(title="Payments - Incorrect Recipients", category="Financial",
+             likelihood=1, impact=5, risk_score=5, status="Identified",
+             description="Risk of payments being sent to incorrect recipients",
+             review_frequency="Quarterly", next_review_date=today + timedelta(days=90)),
+        Risk(title="Incapacity or Long-Term Disability", category="Personnel",
+             likelihood=2, impact=4, risk_score=8, status="Identified",
+             description="Risk of key person incapacity or long-term disability",
+             review_frequency="Annually", next_review_date=today + timedelta(days=365)),
+        Risk(title="Cybersecurity Breach", category="Cybersecurity",
+             likelihood=3, impact=4, risk_score=12, status="Identified",
+             description="Risk of unauthorized access to systems or data breach",
+             review_frequency="Monthly", next_review_date=today + timedelta(days=30)),
+        Risk(title="Debt Call - RBC Secured Credit Facility", category="Financial",
+             likelihood=2, impact=4, risk_score=8, status="Identified",
+             description="Risk of RBC calling the secured credit facility",
+             review_frequency="Quarterly", next_review_date=today + timedelta(days=90)),
+        Risk(title="TINY - Downturn and Forced Sale", category="Market",
+             likelihood=2, impact=4, risk_score=8, status="Identified",
+             description="Risk of market downturn forcing sale of TINY position",
+             review_frequency="Quarterly", next_review_date=today + timedelta(days=90)),
+        Risk(title="Ben - Incapacity", category="Personnel",
+             likelihood=1, impact=4, risk_score=4, status="Identified",
+             description="Risk of Ben becoming incapacitated",
+             review_frequency="Annually", next_review_date=today + timedelta(days=365)),
+        Risk(title="Kurtis - Incapacity", category="Personnel",
+             likelihood=1, impact=4, risk_score=4, status="Identified",
+             description="Risk of Kurtis becoming incapacitated",
+             review_frequency="Annually", next_review_date=today + timedelta(days=365)),
+        Risk(title="Zina - Incapacity", category="Personnel",
+             likelihood=1, impact=4, risk_score=4, status="Identified",
+             description="Risk of Zina becoming incapacitated",
+             review_frequency="Annually", next_review_date=today + timedelta(days=365)),
+        Risk(title="Fraud - Misappropriation of Funds", category="Financial",
+             likelihood=1, impact=5, risk_score=5, status="Identified",
+             description="Risk of fraudulent misappropriation of funds",
+             review_frequency="Quarterly", next_review_date=today + timedelta(days=90)),
+        Risk(title="IRGN - Downturn and Forced Sale", category="Market",
+             likelihood=2, impact=3, risk_score=6, status="Identified",
+             description="Risk of market downturn forcing sale of IRGN position",
+             review_frequency="Quarterly", next_review_date=today + timedelta(days=90)),
+        Risk(title="Reputational Damage - Company Incident", category="Reputational",
+             likelihood=2, impact=3, risk_score=6, status="Identified",
+             description="Risk of reputational damage from a company incident",
+             review_frequency="Quarterly", next_review_date=today + timedelta(days=90)),
+        Risk(title="Zoe - Separation Compensation", category="Legal",
+             likelihood=1, impact=3, risk_score=3, status="Identified",
+             description="Risk related to separation compensation for Zoe",
+             review_frequency="Annually", next_review_date=today + timedelta(days=365)),
+        Risk(title="Reputational Damage - Investment Recommendations", category="Reputational",
+             likelihood=1, impact=3, risk_score=3, status="Identified",
+             description="Risk of reputational damage from investment recommendations",
+             review_frequency="Quarterly", next_review_date=today + timedelta(days=90)),
+        Risk(title="NuJN - Downturn and Forced Sale", category="Market",
+             likelihood=3, impact=2, risk_score=6, status="Identified",
+             description="Risk of market downturn forcing sale of NuJN position",
+             review_frequency="Quarterly", next_review_date=today + timedelta(days=90)),
+        Risk(title="Reputational Damage from Social Media Incident", category="Reputational",
+             likelihood=2, impact=2, risk_score=4, status="Identified",
+             description="Risk of reputational damage from a social media incident",
+             review_frequency="Monthly", next_review_date=today + timedelta(days=30)),
+        Risk(title="Legal Action from Former Employee", category="Legal",
+             likelihood=1, impact=2, risk_score=2, status="Identified",
+             description="Risk of legal action initiated by a former employee",
+             review_frequency="Annually", next_review_date=today + timedelta(days=365)),
+    ]
+
+    for risk in risks:
+        session.add(risk)
+    session.commit()
 
 
 # Initialize database on module import
