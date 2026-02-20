@@ -1,0 +1,32 @@
+{
+  "categories": [
+    "Financial",
+    "Operational",
+    "Legal",
+    "Reputational",
+    "Strategic",
+    "Compliance",
+    "Personnel",
+    "Cybersecurity",
+    "Market"
+  ],
+  "statuses": [
+    "Identified",
+    "Assessed",
+    "Mitigating",
+    "Accepted",
+    "Closed",
+    "Monitoring"
+  ],
+  "owners": [
+    "Andrew",
+    "Kurtis",
+    "Ben"
+  ],
+  "review_frequencies": [
+    "Monthly",
+    "Quarterly",
+    "Semi-annually",
+    "Annually"
+  ]
+}

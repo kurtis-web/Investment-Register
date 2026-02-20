@@ -8,6 +8,7 @@ import numpy as np
 import plotly.graph_objects as go
 from datetime import datetime, date, timedelta
 from collections import defaultdict
+import json
 import os
 import sys
 
@@ -30,7 +31,7 @@ apply_dark_theme()
 
 page_header("Risk Register", "Risk identification, assessment, and monitoring")
 
-# --- Constants ---
+# --- Constants (fixed scales) ---
 
 LIKELIHOOD_LABELS = {
     0: "0 - Not at all",
@@ -50,16 +51,50 @@ IMPACT_LABELS = {
     5: "5 - Extreme",
 }
 
-RISK_CATEGORIES = [
-    "Financial", "Operational", "Legal", "Reputational",
-    "Strategic", "Compliance", "Personnel", "Cybersecurity", "Market"
-]
+# --- Configurable dropdown options ---
 
-RISK_STATUSES = [
-    "Identified", "Assessed", "Mitigating", "Accepted", "Closed", "Monitoring"
-]
+_CONFIG_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "risk_config.json")
 
-REVIEW_FREQUENCIES = ["Monthly", "Quarterly", "Semi-annually", "Annually"]
+_DEFAULT_CONFIG = {
+    "categories": [
+        "Financial", "Operational", "Legal", "Reputational",
+        "Strategic", "Compliance", "Personnel", "Cybersecurity", "Market"
+    ],
+    "statuses": [
+        "Identified", "Assessed", "Mitigating", "Accepted", "Closed", "Monitoring"
+    ],
+    "owners": [],
+    "review_frequencies": ["Monthly", "Quarterly", "Semi-annually", "Annually"],
+}
+
+
+def load_risk_config():
+    """Load dropdown options from config file, falling back to defaults."""
+    if os.path.exists(_CONFIG_PATH):
+        try:
+            with open(_CONFIG_PATH, 'r') as f:
+                config = json.load(f)
+            # Merge with defaults for any missing keys
+            for key, default in _DEFAULT_CONFIG.items():
+                if key not in config:
+                    config[key] = default
+            return config
+        except (json.JSONDecodeError, IOError):
+            pass
+    return dict(_DEFAULT_CONFIG)
+
+
+def save_risk_config(config):
+    """Save dropdown options to config file."""
+    with open(_CONFIG_PATH, 'w') as f:
+        json.dump(config, f, indent=2)
+
+
+risk_config = load_risk_config()
+RISK_CATEGORIES = risk_config["categories"]
+RISK_STATUSES = risk_config["statuses"]
+RISK_OWNERS = risk_config["owners"]
+REVIEW_FREQUENCIES = risk_config["review_frequencies"]
 
 
 def score_color(score):
@@ -78,6 +113,55 @@ def score_label(score):
     elif score >= 5:
         return "Moderate"
     return "Low"
+
+
+def _parse_scale(val):
+    """Extract integer from a label like '3 - Reasonably likely' or return int directly."""
+    if isinstance(val, (int, float)):
+        return int(val)
+    try:
+        return int(str(val).split(" - ")[0])
+    except (ValueError, IndexError):
+        return 0
+
+
+def _stoplight_scale(val):
+    """Stoplight CSS for 0-5 scale values (dark theme optimized)."""
+    n = _parse_scale(val)
+    if n >= 4:
+        return ('background-color: rgba(255, 71, 87, 0.25); '
+                'color: #ff6b7a; font-weight: 600')
+    elif n >= 2:
+        return ('background-color: rgba(255, 165, 2, 0.20); '
+                'color: #ffb830; font-weight: 600')
+    return ('background-color: rgba(0, 210, 106, 0.20); '
+            'color: #33e088; font-weight: 600')
+
+
+def _stoplight_score(val):
+    """Stoplight CSS for 0-25 score values (5-tier, dark theme optimized)."""
+    n = int(val) if not pd.isna(val) else 0
+    if n >= 20:
+        return ('background-color: rgba(204, 0, 0, 0.35); '
+                'color: #ff6b7a; font-weight: 700; font-size: 1.05em')
+    elif n >= 15:
+        return ('background-color: rgba(255, 71, 87, 0.28); '
+                'color: #ff6b7a; font-weight: 700; font-size: 1.05em')
+    elif n >= 10:
+        return ('background-color: rgba(255, 140, 50, 0.25); '
+                'color: #ffa05c; font-weight: 700; font-size: 1.05em')
+    elif n >= 5:
+        return ('background-color: rgba(255, 193, 7, 0.22); '
+                'color: #ffcc33; font-weight: 600; font-size: 1.05em')
+    return ('background-color: rgba(0, 210, 106, 0.18); '
+            'color: #33e088; font-weight: 600; font-size: 1.05em')
+
+
+def _format_scale_short(val):
+    """Strip numeric prefix for cleaner display: '3 - Reasonably likely' -> 'Reasonably likely'."""
+    if isinstance(val, str) and " - " in val:
+        return val.split(" - ", 1)[1]
+    return val
 
 
 # --- Main Page ---
@@ -174,35 +258,255 @@ try:
         # Sort by score descending
         filtered_risks.sort(key=lambda r: r.risk_score, reverse=True)
 
+        # Build owner options: configured list + any existing owners from DB
+        all_owners = list(RISK_OWNERS)
+        for r in risks:
+            if r.risk_owner and r.risk_owner not in all_owners:
+                all_owners.append(r.risk_owner)
+
         # Risk table
         if filtered_risks:
+
+            likelihood_options = [LIKELIHOOD_LABELS[i] for i in range(6)]
+            impact_options = [IMPACT_LABELS[i] for i in range(6)]
+
             table_data = []
             for r in filtered_risks:
                 table_data.append({
+                    '_risk_id': r.id,
                     'Title': r.title,
                     'Category': r.category,
-                    'Entity': entity_map.get(r.entity_id, '—'),
-                    'Owner': r.risk_owner or '—',
+                    'Entity': entity_map.get(r.entity_id, ''),
+                    'Owner': r.risk_owner or '',
                     'Likelihood': r.likelihood,
                     'Impact': r.impact,
                     'Score': r.risk_score,
                     'Status': r.status,
-                    'Review': r.review_frequency or '—',
-                    'Next Review': r.next_review_date.strftime('%Y-%m-%d') if r.next_review_date else '—',
+                    'Review': r.review_frequency or '',
+                    'Next Review': r.next_review_date if r.next_review_date else None,
+                    'Mitigation Plan': r.mitigation_plan or '',
+                    'Mitigation Actions': r.mitigation_actions or '',
+                    'Delete': False,
                 })
 
             df = pd.DataFrame(table_data)
 
-            def color_score(val):
-                if val >= 15:
-                    return f'background-color: {COLORS["danger"]}; color: white; font-weight: bold'
-                elif val >= 5:
-                    return f'background-color: {COLORS["warning"]}; color: black; font-weight: bold'
-                else:
-                    return f'background-color: {COLORS["success"]}; color: white; font-weight: bold'
+            # Store original for diff detection
+            if 'risk_df_original' not in st.session_state or st.session_state.get('_risk_data_stale', True):
+                st.session_state['risk_df_original'] = df.copy()
+                st.session_state['_risk_data_stale'] = False
 
-            styled_df = df.style.map(color_score, subset=['Score'])
-            st.dataframe(styled_df, width='stretch', hide_index=True)
+            entity_names = [e.name for e in entities]
+            name_to_entity_id = {e.name: e.id for e in entities}
+
+            # --- Auto-save: detect edit→view transition and persist changes ---
+            prev_edit_mode = st.session_state.get('_prev_edit_mode', False)
+            edit_mode = st.toggle("Edit Mode", value=False, key="risk_edit_mode")
+            st.session_state['_prev_edit_mode'] = edit_mode
+
+            if prev_edit_mode and not edit_mode:
+                # Transitioning from Edit → View: auto-save pending edits
+                editor_state = st.session_state.get('risk_editor', {})
+                edited_rows = editor_state.get('edited_rows', {})
+                original = st.session_state.get('risk_df_original')
+
+                if edited_rows and original is not None:
+                    changes_made = 0
+                    for row_idx_str, changes in edited_rows.items():
+                        row_idx = int(row_idx_str)
+                        if row_idx >= len(original):
+                            continue
+                        risk_id = int(original.iloc[row_idx]['_risk_id'])
+                        row_orig = original.iloc[row_idx]
+
+                        # Merge changes onto original row
+                        merged = dict(row_orig)
+                        merged.update(changes)
+
+                        entity_name = merged.get('Entity', '')
+                        entity_id = name_to_entity_id.get(entity_name) if entity_name else None
+
+                        update_risk(
+                            session, risk_id,
+                            title=merged['Title'],
+                            category=merged['Category'],
+                            entity_id=entity_id,
+                            risk_owner=merged['Owner'] if merged.get('Owner') else None,
+                            likelihood=_parse_scale(merged['Likelihood']),
+                            impact=_parse_scale(merged['Impact']),
+                            status=merged['Status'],
+                            review_frequency=merged['Review'] if merged.get('Review') else None,
+                            next_review_date=merged.get('Next Review'),
+                            mitigation_plan=merged['Mitigation Plan'] if merged.get('Mitigation Plan') else None,
+                            mitigation_actions=merged['Mitigation Actions'] if merged.get('Mitigation Actions') else None,
+                        )
+                        changes_made += 1
+
+                    if changes_made > 0:
+                        st.session_state['_risk_data_stale'] = True
+                        st.toast(f"Auto-saved {changes_made} change(s).")
+                        st.rerun()
+
+            if edit_mode:
+                # ---- EDIT MODE: st.data_editor with full editing ----
+                # Create edit DataFrame with label strings for Likelihood/Impact
+                edit_df = df.copy()
+                edit_df['Likelihood'] = edit_df['Likelihood'].map(
+                    lambda x: LIKELIHOOD_LABELS.get(x, f"{x}"))
+                edit_df['Impact'] = edit_df['Impact'].map(
+                    lambda x: IMPACT_LABELS.get(x, f"{x}"))
+
+                edited_df = st.data_editor(
+                    edit_df,
+                    column_config={
+                        '_risk_id': None,
+                        'Title': st.column_config.TextColumn(
+                            'Title',
+                            width='medium',
+                            required=True,
+                        ),
+                        'Category': st.column_config.SelectboxColumn(
+                            'Category',
+                            options=RISK_CATEGORIES,
+                            required=True,
+                        ),
+                        'Entity': st.column_config.SelectboxColumn(
+                            'Entity',
+                            options=[''] + entity_names,
+                        ),
+                        'Owner': st.column_config.SelectboxColumn(
+                            'Owner',
+                            options=[''] + all_owners,
+                            width='small',
+                        ),
+                        'Likelihood': st.column_config.SelectboxColumn(
+                            'Likelihood',
+                            options=likelihood_options,
+                            required=True,
+                        ),
+                        'Impact': st.column_config.SelectboxColumn(
+                            'Impact',
+                            options=impact_options,
+                            required=True,
+                        ),
+                        'Score': st.column_config.ProgressColumn(
+                            'Score',
+                            help='Auto-calculated on save (Likelihood x Impact)',
+                            format='%d',
+                            min_value=0,
+                            max_value=25,
+                        ),
+                        'Status': st.column_config.SelectboxColumn(
+                            'Status',
+                            options=RISK_STATUSES,
+                            required=True,
+                        ),
+                        'Review': st.column_config.SelectboxColumn(
+                            'Review',
+                            options=[''] + REVIEW_FREQUENCIES,
+                        ),
+                        'Next Review': st.column_config.DateColumn(
+                            'Next Review',
+                            format='YYYY-MM-DD',
+                        ),
+                        'Mitigation Plan': st.column_config.TextColumn(
+                            'Mitigation Plan',
+                            width='large',
+                        ),
+                        'Mitigation Actions': st.column_config.TextColumn(
+                            'Mitigation Actions',
+                            width='large',
+                        ),
+                        'Delete': st.column_config.CheckboxColumn(
+                            'Delete',
+                            help='Select rows to delete',
+                            default=False,
+                        ),
+                    },
+                    disabled=['Score'],
+                    hide_index=True,
+                    num_rows='fixed',
+                    use_container_width=True,
+                    key='risk_editor',
+                )
+
+                # Delete button
+                col_delete, col_info = st.columns([1, 4])
+
+                with col_delete:
+                    delete_clicked = st.button("Delete Selected", key="delete_selected_risks")
+
+                with col_info:
+                    st.caption("Changes are saved automatically when you switch back to View Mode. Score is recalculated on save.")
+
+                # Delete logic
+                if delete_clicked:
+                    rows_to_delete = edited_df[edited_df['Delete'] == True]
+                    if rows_to_delete.empty:
+                        st.warning("No rows selected for deletion.")
+                    else:
+                        count = len(rows_to_delete)
+                        for _, row in rows_to_delete.iterrows():
+                            risk_id = int(row['_risk_id'])
+                            delete_risk(session, risk_id)
+                        st.success(f"Deleted {count} risk(s).")
+                        st.session_state['_risk_data_stale'] = True
+                        st.rerun()
+
+            else:
+                # ---- VIEW MODE: styled table with stoplight colors ----
+                # Convert Likelihood/Impact to labels for display
+                display_df = df.drop(columns=['_risk_id', 'Delete']).copy()
+                display_df['Likelihood'] = display_df['Likelihood'].map(
+                    lambda x: LIKELIHOOD_LABELS.get(x, f"{x}"))
+                display_df['Impact'] = display_df['Impact'].map(
+                    lambda x: IMPACT_LABELS.get(x, f"{x}"))
+
+                styled_df = (display_df.style
+                    .map(_stoplight_scale, subset=['Likelihood', 'Impact'])
+                    .map(_stoplight_score, subset=['Score'])
+                    .format(_format_scale_short, subset=['Likelihood', 'Impact'])
+                    .format('{:.0f}', subset=['Score'])
+                    .set_properties(
+                        subset=['Score', 'Likelihood', 'Impact', 'Status', 'Category'],
+                        **{'text-align': 'center'}
+                    )
+                    .set_properties(
+                        subset=['Title', 'Mitigation Plan', 'Mitigation Actions'],
+                        **{'text-align': 'left'}
+                    )
+                )
+
+                st.dataframe(
+                    styled_df,
+                    hide_index=True,
+                    use_container_width=True,
+                    column_config={
+                        'Title': st.column_config.TextColumn('Title', width='medium'),
+                        'Score': st.column_config.NumberColumn('Score', width='small'),
+                        'Category': st.column_config.TextColumn('Category', width='small'),
+                        'Status': st.column_config.TextColumn('Status', width='small'),
+                        'Owner': st.column_config.TextColumn('Owner', width='small'),
+                        'Mitigation Plan': st.column_config.TextColumn('Mitigation Plan', width='large'),
+                        'Mitigation Actions': st.column_config.TextColumn('Mitigation Actions', width='large'),
+                    },
+                )
+
+                # Delete risks
+                risk_labels = {f"[{r.risk_score}] {r.title}": r.id for r in filtered_risks}
+                selected_for_delete = st.multiselect(
+                    "Select risks to delete",
+                    options=list(risk_labels.keys()),
+                    key="view_delete_select",
+                )
+                if selected_for_delete:
+                    if st.button(f"Delete {len(selected_for_delete)} risk(s)", type="primary", key="view_delete_risks"):
+                        for label in selected_for_delete:
+                            delete_risk(session, risk_labels[label])
+                        st.session_state['_risk_data_stale'] = True
+                        st.success(f"Deleted {len(selected_for_delete)} risk(s).")
+                        st.rerun()
+
         else:
             st.info("No risks match the current filters.")
 
@@ -228,7 +532,7 @@ try:
                         key="new_investment"
                     )
                 with col2:
-                    new_owner = st.text_input("Risk Owner")
+                    new_owner = st.selectbox("Risk Owner", [""] + all_owners, key="new_owner")
                     new_status = st.selectbox("Status", RISK_STATUSES, key="new_status")
                     new_review_freq = st.selectbox("Review Frequency", REVIEW_FREQUENCIES, key="new_review_freq")
 
@@ -276,7 +580,7 @@ try:
                             category=new_category,
                             entity_id=entity_id,
                             investment_id=investment_id,
-                            risk_owner=new_owner if new_owner else None,
+                            risk_owner=new_owner if new_owner and new_owner != "" else None,
                             likelihood=new_likelihood,
                             impact=new_impact,
                             status=new_status,
@@ -286,127 +590,60 @@ try:
                             next_review_date=new_review_date,
                         )
                         st.success(f"Added risk: {new_title}")
+                        # Clear form fields
+                        for key in ['new_category', 'new_entity', 'new_investment',
+                                    'new_owner', 'new_status', 'new_review_freq',
+                                    'new_likelihood', 'new_impact', 'new_mit_plan',
+                                    'new_mit_actions', 'new_review_date']:
+                            if key in st.session_state:
+                                del st.session_state[key]
+                        st.session_state['_risk_data_stale'] = True
                         st.rerun()
                     else:
                         st.error("Title is required.")
 
-        # Edit/Delete existing risks
-        if filtered_risks:
-            section_header("Edit Risks")
-            for r in filtered_risks:
-                color = score_color(r.risk_score)
-                label = score_label(r.risk_score)
-                with st.expander(f"[{r.risk_score}] {r.title} — {r.category} ({r.status})"):
-                    with st.form(f"edit_risk_{r.id}"):
-                        edit_title = st.text_input("Title", value=r.title, key=f"edit_title_{r.id}")
-                        edit_description = st.text_area("Description", value=r.description or "", key=f"edit_desc_{r.id}")
+        # Manage dropdown options
+        with st.expander("Manage Dropdown Options"):
+            st.caption("Edit the options available in each dropdown. One item per line.")
 
-                        col1, col2 = st.columns(2)
-                        with col1:
-                            edit_category = st.selectbox(
-                                "Category", RISK_CATEGORIES,
-                                index=RISK_CATEGORIES.index(r.category) if r.category in RISK_CATEGORIES else 0,
-                                key=f"edit_cat_{r.id}"
-                            )
-                            entity_options = ["None"] + [e.name for e in entities]
-                            current_entity = entity_map.get(r.entity_id, "None")
-                            edit_entity = st.selectbox(
-                                "Entity", entity_options,
-                                index=entity_options.index(current_entity) if current_entity in entity_options else 0,
-                                key=f"edit_entity_{r.id}"
-                            )
-                            inv_options = ["None"] + [f"{i.name} ({i.symbol})" if i.symbol else i.name for i in investments]
-                            current_inv = "None"
-                            if r.investment_id:
-                                inv_obj = next((i for i in investments if i.id == r.investment_id), None)
-                                if inv_obj:
-                                    current_inv = f"{inv_obj.name} ({inv_obj.symbol})" if inv_obj.symbol else inv_obj.name
-                            edit_investment = st.selectbox(
-                                "Linked Investment", inv_options,
-                                index=inv_options.index(current_inv) if current_inv in inv_options else 0,
-                                key=f"edit_inv_{r.id}"
-                            )
-                        with col2:
-                            edit_owner = st.text_input("Risk Owner", value=r.risk_owner or "", key=f"edit_owner_{r.id}")
-                            edit_status = st.selectbox(
-                                "Status", RISK_STATUSES,
-                                index=RISK_STATUSES.index(r.status) if r.status in RISK_STATUSES else 0,
-                                key=f"edit_status_{r.id}"
-                            )
-                            edit_review_freq = st.selectbox(
-                                "Review Frequency", REVIEW_FREQUENCIES,
-                                index=REVIEW_FREQUENCIES.index(r.review_frequency) if r.review_frequency in REVIEW_FREQUENCIES else 0,
-                                key=f"edit_freq_{r.id}"
-                            )
+            col1, col2 = st.columns(2)
+            with col1:
+                edit_categories = st.text_area(
+                    "Categories",
+                    value="\n".join(RISK_CATEGORIES),
+                    height=200,
+                    key="edit_categories"
+                )
+                edit_owners = st.text_area(
+                    "Owners",
+                    value="\n".join(RISK_OWNERS),
+                    height=200,
+                    key="edit_owners"
+                )
+            with col2:
+                edit_statuses = st.text_area(
+                    "Statuses",
+                    value="\n".join(RISK_STATUSES),
+                    height=200,
+                    key="edit_statuses"
+                )
+                edit_frequencies = st.text_area(
+                    "Review Frequencies",
+                    value="\n".join(REVIEW_FREQUENCIES),
+                    height=200,
+                    key="edit_frequencies"
+                )
 
-                        col1, col2, col3 = st.columns(3)
-                        with col1:
-                            edit_likelihood = st.selectbox(
-                                "Likelihood", list(LIKELIHOOD_LABELS.keys()),
-                                format_func=lambda x: LIKELIHOOD_LABELS[x],
-                                index=r.likelihood,
-                                key=f"edit_like_{r.id}"
-                            )
-                        with col2:
-                            edit_impact = st.selectbox(
-                                "Impact", list(IMPACT_LABELS.keys()),
-                                format_func=lambda x: IMPACT_LABELS[x],
-                                index=r.impact,
-                                key=f"edit_impact_{r.id}"
-                            )
-                        with col3:
-                            st.metric("Calculated Score", edit_likelihood * edit_impact)
-
-                        edit_mitigation_plan = st.text_area("Mitigation Plan", value=r.mitigation_plan or "", key=f"edit_mit_{r.id}")
-                        edit_mitigation_actions = st.text_area("Mitigation Actions", value=r.mitigation_actions or "", key=f"edit_act_{r.id}")
-                        edit_review_date = st.date_input(
-                            "Next Review Date",
-                            value=r.next_review_date if r.next_review_date else date.today() + timedelta(days=90),
-                            key=f"edit_date_{r.id}"
-                        )
-
-                        col1, col2 = st.columns(2)
-                        with col1:
-                            update_clicked = st.form_submit_button("Update Risk")
-                        with col2:
-                            delete_clicked = st.form_submit_button("Delete Risk")
-
-                    if update_clicked:
-                        entity_id = None
-                        if edit_entity != "None":
-                            entity_obj = next((e for e in entities if e.name == edit_entity), None)
-                            if entity_obj:
-                                entity_id = entity_obj.id
-
-                        investment_id = None
-                        if edit_investment != "None":
-                            inv_pos = inv_options.index(edit_investment) - 1 if edit_investment in inv_options else -1
-                            if 0 <= inv_pos < len(investments):
-                                investment_id = investments[inv_pos].id
-
-                        update_risk(
-                            session, r.id,
-                            title=edit_title,
-                            description=edit_description if edit_description else None,
-                            category=edit_category,
-                            entity_id=entity_id,
-                            investment_id=investment_id,
-                            risk_owner=edit_owner if edit_owner else None,
-                            likelihood=edit_likelihood,
-                            impact=edit_impact,
-                            status=edit_status,
-                            mitigation_plan=edit_mitigation_plan if edit_mitigation_plan else None,
-                            mitigation_actions=edit_mitigation_actions if edit_mitigation_actions else None,
-                            review_frequency=edit_review_freq,
-                            next_review_date=edit_review_date,
-                        )
-                        st.success(f"Updated: {edit_title}")
-                        st.rerun()
-
-                    if delete_clicked:
-                        delete_risk(session, r.id)
-                        st.success(f"Deleted: {r.title}")
-                        st.rerun()
+            if st.button("Save Dropdown Options", type="primary", key="save_dropdown_options"):
+                new_config = {
+                    "categories": [x.strip() for x in edit_categories.strip().split("\n") if x.strip()],
+                    "statuses": [x.strip() for x in edit_statuses.strip().split("\n") if x.strip()],
+                    "owners": [x.strip() for x in edit_owners.strip().split("\n") if x.strip()],
+                    "review_frequencies": [x.strip() for x in edit_frequencies.strip().split("\n") if x.strip()],
+                }
+                save_risk_config(new_config)
+                st.success("Dropdown options saved. Reloading...")
+                st.rerun()
 
     # =========================================================================
     # TAB 2: RISK MATRIX (5x5 Heatmap)
