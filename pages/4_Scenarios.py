@@ -254,7 +254,7 @@ try:
         # Waterfall chart
         fig = go.Figure()
 
-        colors = ['red' if x < 0 else 'green' for x in df_impact['Impact ($)']]
+        colors = [COLORS['danger'] if x < 0 else COLORS['success'] for x in df_impact['Impact ($)']]
 
         fig.add_trace(go.Bar(
             x=df_impact['Asset Class'],

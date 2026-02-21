@@ -18,6 +18,7 @@ from src.database import get_session, init_db, get_all_investments, get_all_enti
 from src.portfolio import get_portfolio_overview, update_market_prices, get_recent_activity
 from src.market_data import get_usd_cad_rate, get_fx_rate, get_stock_price
 from src.calculations import format_currency, format_percentage
+from src.styles import apply_theme, COLORS, PLOTLY_LAYOUT, apply_plotly_theme, page_header, section_header
 
 # Page configuration
 st.set_page_config(
@@ -30,33 +31,11 @@ st.set_page_config(
 # Initialize database
 init_db()
 
-# Dark theme color palette
-COLORS = {
-    'bg_primary': '#000000',
-    'bg_secondary': '#0a0a0a',
-    'bg_card': '#111111',
-    'bg_card_hover': '#1a1a1a',
-    'border': '#1f1f1f',
-    'border_light': '#2a2a2a',
-    'text_primary': '#ffffff',
-    'text_secondary': '#a0a0a0',
-    'text_muted': '#666666',
-    'accent': '#ff5733',
-    'accent_light': '#ff6b47',
-    'accent_gradient': 'linear-gradient(135deg, #ff5733 0%, #ff8c66 100%)',
-    'success': '#00d26a',
-    'success_bg': 'rgba(0, 210, 106, 0.1)',
-    'danger': '#ff4757',
-    'danger_bg': 'rgba(255, 71, 87, 0.1)',
-    'warning': '#ffa502',
-    'chart_colors': ['#ff5733', '#3498db', '#2ecc71', '#9b59b6', '#f39c12', '#1abc9c', '#e74c3c', '#00d2d3', '#ff6b81']
-}
+# Apply shared theme
+apply_theme()
 
-# Premium Dark Theme CSS
-st.markdown(f"""
-<style>
-    /* Import Google Fonts */
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+# Legacy CSS block removed — now uses shared apply_theme() from src/styles.py
+_LEGACY_CSS_REMOVED = """
 
     /* Global Styles */
     .stApp {{
@@ -384,30 +363,7 @@ st.markdown(f"""
         color: {COLORS['accent']} !important;
         border-left: 3px solid {COLORS['accent']} !important;
     }}
-</style>
-""", unsafe_allow_html=True)
-
-# Dark theme for Plotly charts
-PLOTLY_LAYOUT = {
-    'paper_bgcolor': 'rgba(0,0,0,0)',
-    'plot_bgcolor': 'rgba(0,0,0,0)',
-    'font': {'color': COLORS['text_secondary'], 'family': 'Inter, sans-serif'},
-    'title': {'font': {'color': COLORS['text_primary']}},
-    'legend': {
-        'bgcolor': 'rgba(0,0,0,0)',
-        'font': {'color': COLORS['text_secondary']}
-    },
-    'xaxis': {
-        'gridcolor': COLORS['border'],
-        'linecolor': COLORS['border'],
-        'tickfont': {'color': COLORS['text_muted']}
-    },
-    'yaxis': {
-        'gridcolor': COLORS['border'],
-        'linecolor': COLORS['border'],
-        'tickfont': {'color': COLORS['text_muted']}
-    }
-}
+"""
 
 
 def format_gain_display(value: float, percentage: float) -> str:

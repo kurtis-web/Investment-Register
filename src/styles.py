@@ -1,33 +1,33 @@
 """
 Shared styles and theme configuration for the Investment Register.
-Import this module in all pages to maintain consistent dark theme styling.
+Import this module in all pages to maintain consistent styling.
 """
 
 import streamlit as st
 
-# Dark theme color palette
+# Light theme color palette — Slite-inspired
 COLORS = {
-    'bg_primary': '#000000',
-    'bg_secondary': '#0a0a0a',
-    'bg_card': '#111111',
-    'bg_card_hover': '#1a1a1a',
-    'border': '#1f1f1f',
-    'border_light': '#2a2a2a',
-    'text_primary': '#ffffff',
-    'text_secondary': '#a0a0a0',
-    'text_muted': '#666666',
-    'accent': '#ff5733',
-    'accent_light': '#ff6b47',
-    'accent_gradient': 'linear-gradient(135deg, #ff5733 0%, #ff8c66 100%)',
-    'success': '#00d26a',
-    'success_bg': 'rgba(0, 210, 106, 0.1)',
-    'danger': '#ff4757',
-    'danger_bg': 'rgba(255, 71, 87, 0.1)',
-    'warning': '#ffa502',
-    'chart_colors': ['#ff5733', '#3498db', '#2ecc71', '#9b59b6', '#f39c12', '#1abc9c', '#e74c3c', '#00d2d3', '#ff6b81']
+    'bg_primary': '#FAFAF8',
+    'bg_secondary': '#F4F3EF',
+    'bg_card': '#FFFFFF',
+    'bg_card_hover': '#F9F8F6',
+    'border': '#E8E6E1',
+    'border_light': '#EEECE7',
+    'text_primary': '#1A1A1A',
+    'text_secondary': '#4A4A4A',
+    'text_muted': '#8C8C88',
+    'accent': '#4F46E5',
+    'accent_light': '#6366F1',
+    'accent_gradient': 'linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%)',
+    'success': '#16A34A',
+    'success_bg': 'rgba(22, 163, 74, 0.08)',
+    'danger': '#DC2626',
+    'danger_bg': 'rgba(220, 38, 38, 0.08)',
+    'warning': '#D97706',
+    'chart_colors': ['#4F46E5', '#0EA5E9', '#16A34A', '#8B5CF6', '#F59E0B', '#14B8A6', '#EC4899', '#06B6D4', '#F97316']
 }
 
-# Dark theme base settings for Plotly charts
+# Base settings for Plotly charts
 # Note: Don't use **PLOTLY_LAYOUT with additional legend/xaxis/yaxis params - use apply_plotly_theme() instead
 PLOTLY_LAYOUT = {
     'paper_bgcolor': 'rgba(0,0,0,0)',
@@ -37,7 +37,7 @@ PLOTLY_LAYOUT = {
 
 
 def apply_plotly_theme(fig, show_legend=True, height=400):
-    """Apply dark theme to a Plotly figure safely."""
+    """Apply light theme to a Plotly figure."""
     fig.update_layout(
         paper_bgcolor='rgba(0,0,0,0)',
         plot_bgcolor='rgba(0,0,0,0)',
@@ -48,22 +48,24 @@ def apply_plotly_theme(fig, show_legend=True, height=400):
             font=dict(color=COLORS['text_secondary'])
         ),
         xaxis=dict(
-            gridcolor=COLORS['border'],
-            linecolor=COLORS['border'],
-            tickfont=dict(color=COLORS['text_muted'])
+            gridcolor='#EEECE7',
+            linecolor='#E8E6E1',
+            tickfont=dict(color=COLORS['text_muted']),
+            gridwidth=1,
         ),
         yaxis=dict(
-            gridcolor=COLORS['border'],
-            linecolor=COLORS['border'],
-            tickfont=dict(color=COLORS['text_muted'])
+            gridcolor='#EEECE7',
+            linecolor='#E8E6E1',
+            tickfont=dict(color=COLORS['text_muted']),
+            gridwidth=1,
         ),
         height=height
     )
     return fig
 
 
-def apply_dark_theme():
-    """Apply the dark theme CSS to the Streamlit app."""
+def apply_theme():
+    """Apply the light theme CSS to the Streamlit app."""
     st.markdown(f"""
 <style>
     /* Import Google Fonts */
@@ -73,12 +75,15 @@ def apply_dark_theme():
     .stApp {{
         background: {COLORS['bg_primary']};
         font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
     }}
 
     /* Main content area */
     .main .block-container {{
-        padding: 2rem 3rem;
-        max-width: 100%;
+        padding: 3rem 2.5rem;
+        max-width: 1280px;
+        margin: 0 auto;
     }}
 
     /* Sidebar styling */
@@ -94,14 +99,21 @@ def apply_dark_theme():
     /* Headers */
     h1 {{
         color: {COLORS['text_primary']} !important;
-        font-weight: 600 !important;
-        letter-spacing: -0.02em;
+        font-weight: 700 !important;
+        letter-spacing: -0.03em;
+        line-height: 1.2 !important;
         margin-bottom: 1.5rem !important;
     }}
 
-    h2, h3 {{
+    h2 {{
         color: {COLORS['text_primary']} !important;
-        font-weight: 500 !important;
+        font-weight: 600 !important;
+        letter-spacing: -0.02em;
+    }}
+
+    h3 {{
+        color: {COLORS['text_primary']} !important;
+        font-weight: 600 !important;
         letter-spacing: -0.01em;
     }}
 
@@ -109,29 +121,31 @@ def apply_dark_theme():
     [data-testid="stMetric"] {{
         background: {COLORS['bg_card']};
         border: 1px solid {COLORS['border']};
-        border-radius: 12px;
-        padding: 1.25rem;
-        transition: all 0.2s ease;
+        border-radius: 16px;
+        padding: 1.5rem;
+        transition: all 0.2s cubic-bezier(.215,.61,.355,1);
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
     }}
 
     [data-testid="stMetric"]:hover {{
-        background: {COLORS['bg_card_hover']};
-        border-color: {COLORS['border_light']};
+        background: {COLORS['bg_card']};
+        border-color: {COLORS['border']};
         transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.06);
     }}
 
     [data-testid="stMetric"] label {{
-        color: {COLORS['text_secondary']} !important;
-        font-size: 0.85rem !important;
+        color: {COLORS['text_muted']} !important;
+        font-size: 0.8rem !important;
         font-weight: 500 !important;
         text-transform: uppercase;
-        letter-spacing: 0.05em;
+        letter-spacing: 0.06em;
     }}
 
     [data-testid="stMetric"] [data-testid="stMetricValue"] {{
         color: {COLORS['text_primary']} !important;
         font-size: 1.75rem !important;
-        font-weight: 600 !important;
+        font-weight: 700 !important;
     }}
 
     [data-testid="stMetric"] [data-testid="stMetricDelta"] {{
@@ -143,24 +157,27 @@ def apply_dark_theme():
         background: {COLORS['accent']} !important;
         color: white !important;
         border: none !important;
-        border-radius: 8px !important;
-        padding: 0.6rem 1.2rem !important;
+        border-radius: 42px !important;
+        padding: 0.6rem 1.5rem !important;
         font-weight: 500 !important;
-        transition: all 0.2s ease !important;
+        font-size: 0.875rem !important;
+        transition: all 0.2s cubic-bezier(.215,.61,.355,1) !important;
+        box-shadow: 0 1px 2px rgba(79, 70, 229, 0.15) !important;
         text-transform: none !important;
     }}
 
     .stButton > button:hover {{
         background: {COLORS['accent_light']} !important;
         transform: translateY(-1px);
-        box-shadow: 0 4px 12px rgba(255, 87, 51, 0.3) !important;
+        box-shadow: 0 4px 12px rgba(79, 70, 229, 0.25) !important;
     }}
 
     /* DataFrames */
     .stDataFrame {{
         border: 1px solid {COLORS['border']} !important;
-        border-radius: 12px !important;
+        border-radius: 16px !important;
         overflow: hidden;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
     }}
 
     .stDataFrame [data-testid="stDataFrameResizable"] {{
@@ -173,11 +190,11 @@ def apply_dark_theme():
 
     .stDataFrame th {{
         background: {COLORS['bg_secondary']} !important;
-        color: {COLORS['text_secondary']} !important;
+        color: {COLORS['text_muted']} !important;
         font-weight: 600 !important;
         text-transform: uppercase;
-        font-size: 0.75rem !important;
-        letter-spacing: 0.05em;
+        font-size: 0.7rem !important;
+        letter-spacing: 0.06em;
         padding: 1rem !important;
         border-bottom: 1px solid {COLORS['border']} !important;
     }}
@@ -185,39 +202,40 @@ def apply_dark_theme():
     .stDataFrame td {{
         color: {COLORS['text_primary']} !important;
         padding: 0.875rem 1rem !important;
-        border-bottom: 1px solid {COLORS['border']} !important;
+        border-bottom: 1px solid {COLORS['border_light']} !important;
     }}
 
     .stDataFrame tr:hover td {{
-        background: {COLORS['bg_card_hover']} !important;
+        background: {COLORS['bg_primary']} !important;
     }}
 
     /* Expanders */
     .streamlit-expanderHeader {{
         background: {COLORS['bg_card']} !important;
         border: 1px solid {COLORS['border']} !important;
-        border-radius: 8px !important;
+        border-radius: 12px !important;
         color: {COLORS['text_primary']} !important;
         font-weight: 500 !important;
+        transition: all 0.2s cubic-bezier(.215,.61,.355,1);
     }}
 
     .streamlit-expanderHeader:hover {{
         background: {COLORS['bg_card_hover']} !important;
-        border-color: {COLORS['border_light']} !important;
+        border-color: {COLORS['border']} !important;
     }}
 
     .streamlit-expanderContent {{
         background: {COLORS['bg_card']} !important;
         border: 1px solid {COLORS['border']} !important;
         border-top: none !important;
-        border-radius: 0 0 8px 8px !important;
+        border-radius: 0 0 12px 12px !important;
     }}
 
     /* Info/Warning/Success/Error boxes */
     .stAlert {{
         background: {COLORS['bg_card']} !important;
         border: 1px solid {COLORS['border']} !important;
-        border-radius: 8px !important;
+        border-radius: 12px !important;
         color: {COLORS['text_primary']} !important;
     }}
 
@@ -225,46 +243,51 @@ def apply_dark_theme():
     .stSelectbox > div > div {{
         background: {COLORS['bg_card']} !important;
         border: 1px solid {COLORS['border']} !important;
-        border-radius: 8px !important;
+        border-radius: 10px !important;
         color: {COLORS['text_primary']} !important;
+        transition: border-color 0.2s cubic-bezier(.215,.61,.355,1);
     }}
 
     .stTextInput > div > div > input {{
         background: {COLORS['bg_card']} !important;
         border: 1px solid {COLORS['border']} !important;
-        border-radius: 8px !important;
+        border-radius: 10px !important;
         color: {COLORS['text_primary']} !important;
     }}
 
     .stTextInput > div > div > input:focus {{
         border-color: {COLORS['accent']} !important;
-        box-shadow: 0 0 0 2px rgba(255, 87, 51, 0.2) !important;
+        box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.12) !important;
     }}
 
     /* Tabs */
     .stTabs [data-baseweb="tab-list"] {{
         background: transparent;
-        gap: 0.5rem;
+        gap: 0.25rem;
+        border-bottom: 1px solid {COLORS['border']};
     }}
 
     .stTabs [data-baseweb="tab"] {{
-        background: {COLORS['bg_card']} !important;
-        border: 1px solid {COLORS['border']} !important;
-        border-radius: 8px !important;
-        color: {COLORS['text_secondary']} !important;
-        padding: 0.75rem 1.5rem !important;
+        background: transparent !important;
+        border: none !important;
+        border-radius: 0 !important;
+        color: {COLORS['text_muted']} !important;
+        padding: 0.75rem 1.25rem !important;
         font-weight: 500 !important;
+        border-bottom: 2px solid transparent !important;
+        transition: all 0.2s cubic-bezier(.215,.61,.355,1);
     }}
 
     .stTabs [data-baseweb="tab"]:hover {{
-        background: {COLORS['bg_card_hover']} !important;
+        background: transparent !important;
         color: {COLORS['text_primary']} !important;
     }}
 
     .stTabs [aria-selected="true"] {{
-        background: {COLORS['accent']} !important;
-        border-color: {COLORS['accent']} !important;
-        color: white !important;
+        background: transparent !important;
+        color: {COLORS['accent']} !important;
+        border-bottom: 2px solid {COLORS['accent']} !important;
+        font-weight: 600 !important;
     }}
 
     /* Dividers */
@@ -276,8 +299,8 @@ def apply_dark_theme():
 
     /* Scrollbar */
     ::-webkit-scrollbar {{
-        width: 8px;
-        height: 8px;
+        width: 6px;
+        height: 6px;
     }}
 
     ::-webkit-scrollbar-track {{
@@ -285,8 +308,8 @@ def apply_dark_theme():
     }}
 
     ::-webkit-scrollbar-thumb {{
-        background: {COLORS['border_light']};
-        border-radius: 4px;
+        background: #D4D2CD;
+        border-radius: 3px;
     }}
 
     ::-webkit-scrollbar-thumb:hover {{
@@ -311,7 +334,7 @@ def apply_dark_theme():
     [data-testid="stFileUploader"] {{
         background: {COLORS['bg_card']} !important;
         border: 2px dashed {COLORS['border']} !important;
-        border-radius: 12px !important;
+        border-radius: 16px !important;
         padding: 2rem !important;
     }}
 
@@ -324,7 +347,7 @@ def apply_dark_theme():
         background: {COLORS['accent']} !important;
     }}
 
-    /* Sidebar nav - consistent spacing and no animations */
+    /* Sidebar nav - consistent spacing */
     [data-testid="stSidebarNav"] {{
         padding-bottom: 0.5rem !important;
     }}
@@ -341,9 +364,9 @@ def apply_dark_theme():
 
     [data-testid="stSidebarNav"] a {{
         color: {COLORS['text_secondary']} !important;
-        padding: 0.4rem 0.75rem !important;
-        border-radius: 6px !important;
-        transition: none !important;
+        padding: 0.5rem 0.75rem !important;
+        border-radius: 8px !important;
+        transition: all 0.15s cubic-bezier(.215,.61,.355,1) !important;
         margin: 0 !important;
         min-height: unset !important;
         line-height: 1.4 !important;
@@ -354,21 +377,22 @@ def apply_dark_theme():
     }}
 
     [data-testid="stSidebarNav"] a:hover {{
-        background: {COLORS['bg_card']} !important;
+        background: rgba(79, 70, 229, 0.06) !important;
         color: {COLORS['text_primary']} !important;
     }}
 
     [data-testid="stSidebarNav"] a[aria-selected="true"] {{
-        background: {COLORS['bg_card']} !important;
+        background: rgba(79, 70, 229, 0.08) !important;
         color: {COLORS['accent']} !important;
         border-left: 3px solid {COLORS['accent']} !important;
+        font-weight: 500 !important;
     }}
 
     /* Number inputs */
     .stNumberInput > div > div > input {{
         background: {COLORS['bg_card']} !important;
         border: 1px solid {COLORS['border']} !important;
-        border-radius: 8px !important;
+        border-radius: 10px !important;
         color: {COLORS['text_primary']} !important;
     }}
 
@@ -376,7 +400,7 @@ def apply_dark_theme():
     .stTextArea > div > div > textarea {{
         background: {COLORS['bg_card']} !important;
         border: 1px solid {COLORS['border']} !important;
-        border-radius: 8px !important;
+        border-radius: 10px !important;
         color: {COLORS['text_primary']} !important;
     }}
 
@@ -393,8 +417,9 @@ def apply_dark_theme():
     [data-testid="stForm"] {{
         background: {COLORS['bg_card']} !important;
         border: 1px solid {COLORS['border']} !important;
-        border-radius: 12px !important;
+        border-radius: 16px !important;
         padding: 1.5rem !important;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
     }}
 
     /* Download button */
@@ -402,27 +427,34 @@ def apply_dark_theme():
         background: {COLORS['bg_card']} !important;
         border: 1px solid {COLORS['border']} !important;
         color: {COLORS['text_primary']} !important;
+        border-radius: 42px !important;
+        transition: all 0.2s cubic-bezier(.215,.61,.355,1) !important;
     }}
 
     .stDownloadButton > button:hover {{
         background: {COLORS['bg_card_hover']} !important;
         border-color: {COLORS['accent']} !important;
+        transform: translateY(-1px);
     }}
 </style>
 """, unsafe_allow_html=True)
 
 
+# Backward compatibility alias
+apply_dark_theme = apply_theme
+
+
 def page_header(title: str, subtitle: str = None):
     """Render a styled page header."""
-    html = f'<h1 style="font-size: 2rem; margin-bottom: 0.5rem;">{title}</h1>'
+    html = f'<h1 style="font-size: 2.25rem; font-weight: 700; letter-spacing: -0.03em; margin-bottom: 0.5rem;">{title}</h1>'
     if subtitle:
-        html += f'<p style="color: {COLORS["text_muted"]}; margin-bottom: 2rem;">{subtitle}</p>'
+        html += f'<p style="color: {COLORS["text_muted"]}; font-size: 1.05rem; margin-bottom: 2.5rem;">{subtitle}</p>'
     st.markdown(html, unsafe_allow_html=True)
 
 
 def section_header(title: str):
     """Render a styled section header."""
     st.markdown(
-        f"<h3 style='color: {COLORS['text_primary']}; font-size: 1.1rem; font-weight: 500;'>{title}</h3>",
+        f"<h3 style='color: {COLORS['text_primary']}; font-size: 1.15rem; font-weight: 600; letter-spacing: -0.01em;'>{title}</h3>",
         unsafe_allow_html=True
     )

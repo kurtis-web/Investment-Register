@@ -129,35 +129,35 @@ def _parse_scale(val):
 
 
 def _stoplight_scale(val):
-    """Stoplight CSS for 0-5 scale values (dark theme optimized)."""
+    """Stoplight CSS for 0-5 scale values (light theme optimized)."""
     n = _parse_scale(val)
     if n >= 4:
-        return ('background-color: rgba(255, 71, 87, 0.25); '
-                'color: #ff6b7a; font-weight: 600')
+        return ('background-color: rgba(220, 38, 38, 0.10); '
+                'color: #B91C1C; font-weight: 600')
     elif n >= 2:
-        return ('background-color: rgba(255, 165, 2, 0.20); '
-                'color: #ffb830; font-weight: 600')
-    return ('background-color: rgba(0, 210, 106, 0.20); '
-            'color: #33e088; font-weight: 600')
+        return ('background-color: rgba(217, 119, 6, 0.10); '
+                'color: #B45309; font-weight: 600')
+    return ('background-color: rgba(22, 163, 74, 0.10); '
+            'color: #15803D; font-weight: 600')
 
 
 def _stoplight_score(val):
-    """Stoplight CSS for 0-25 score values (5-tier, dark theme optimized)."""
+    """Stoplight CSS for 0-25 score values (5-tier, light theme optimized)."""
     n = int(val) if not pd.isna(val) else 0
     if n >= 20:
-        return ('background-color: rgba(204, 0, 0, 0.35); '
-                'color: #ff6b7a; font-weight: 700; font-size: 1.05em')
+        return ('background-color: rgba(153, 0, 0, 0.15); '
+                'color: #7F1D1D; font-weight: 700; font-size: 1.05em')
     elif n >= 15:
-        return ('background-color: rgba(255, 71, 87, 0.28); '
-                'color: #ff6b7a; font-weight: 700; font-size: 1.05em')
+        return ('background-color: rgba(220, 38, 38, 0.12); '
+                'color: #B91C1C; font-weight: 700; font-size: 1.05em')
     elif n >= 10:
-        return ('background-color: rgba(255, 140, 50, 0.25); '
-                'color: #ffa05c; font-weight: 700; font-size: 1.05em')
+        return ('background-color: rgba(234, 88, 12, 0.10); '
+                'color: #C2410C; font-weight: 700; font-size: 1.05em')
     elif n >= 5:
-        return ('background-color: rgba(255, 193, 7, 0.22); '
-                'color: #ffcc33; font-weight: 600; font-size: 1.05em')
-    return ('background-color: rgba(0, 210, 106, 0.18); '
-            'color: #33e088; font-weight: 600; font-size: 1.05em')
+        return ('background-color: rgba(217, 119, 6, 0.10); '
+                'color: #B45309; font-weight: 600; font-size: 1.05em')
+    return ('background-color: rgba(22, 163, 74, 0.08); '
+            'color: #15803D; font-weight: 600; font-size: 1.05em')
 
 
 def _format_scale_short(val):
@@ -690,16 +690,16 @@ try:
 
         # Custom colorscale: green -> yellow -> orange -> red
         colorscale = [
-            [0.0, '#00d26a'],
-            [0.24, '#00d26a'],
-            [0.25, '#7dbd3a'],
-            [0.39, '#b8a620'],
-            [0.40, '#ffa502'],
-            [0.59, '#ff7b2a'],
-            [0.60, '#ff5733'],
-            [0.79, '#e83e3e'],
-            [0.80, '#ff4757'],
-            [1.0, '#cc0000'],
+            [0.0, '#86EFAC'],
+            [0.24, '#86EFAC'],
+            [0.25, '#BEF264'],
+            [0.39, '#FDE047'],
+            [0.40, '#FBBF24'],
+            [0.59, '#FB923C'],
+            [0.60, '#F87171'],
+            [0.79, '#EF4444'],
+            [0.80, '#DC2626'],
+            [1.0, '#991B1B'],
         ]
 
         fig = go.Figure(data=go.Heatmap(
@@ -708,7 +708,7 @@ try:
             y=y_labels,
             text=display_text,
             texttemplate="<b>%{text}</b>",
-            textfont={"size": 18, "color": "white"},
+            textfont={"size": 18, "color": "#1A1A1A"},
             colorscale=colorscale,
             showscale=False,
             hovertext=[[risk_names_matrix[i][j] if risk_names_matrix[i][j] else "No risks"
@@ -729,11 +729,11 @@ try:
         # Legend
         col1, col2, col3 = st.columns(3)
         with col1:
-            st.markdown(f"<div style='padding: 8px 12px; background: {COLORS['danger']}; color: white; border-radius: 6px; text-align: center;'><b>Red Zone (15-25)</b><br>Immediate attention</div>", unsafe_allow_html=True)
+            st.markdown(f"<div style='padding: 10px 14px; background: {COLORS['danger_bg']}; color: {COLORS['danger']}; border: 1px solid rgba(220,38,38,0.2); border-radius: 10px; text-align: center;'><b>Red Zone (15-25)</b><br>Immediate attention</div>", unsafe_allow_html=True)
         with col2:
-            st.markdown(f"<div style='padding: 8px 12px; background: {COLORS['warning']}; color: black; border-radius: 6px; text-align: center;'><b>Orange Zone (5-14)</b><br>Active monitoring</div>", unsafe_allow_html=True)
+            st.markdown(f"<div style='padding: 10px 14px; background: rgba(217,119,6,0.08); color: {COLORS['warning']}; border: 1px solid rgba(217,119,6,0.2); border-radius: 10px; text-align: center;'><b>Orange Zone (5-14)</b><br>Active monitoring</div>", unsafe_allow_html=True)
         with col3:
-            st.markdown(f"<div style='padding: 8px 12px; background: {COLORS['success']}; color: white; border-radius: 6px; text-align: center;'><b>Green Zone (1-4)</b><br>Acceptable risk</div>", unsafe_allow_html=True)
+            st.markdown(f"<div style='padding: 10px 14px; background: {COLORS['success_bg']}; color: {COLORS['success']}; border: 1px solid rgba(22,163,74,0.2); border-radius: 10px; text-align: center;'><b>Green Zone (1-4)</b><br>Acceptable risk</div>", unsafe_allow_html=True)
 
         # Distribution breakdown
         st.markdown("---")

@@ -19,7 +19,7 @@ from src.models import (
     RealEstateProperty, FXRateSnapshot, CashflowItem, ActivityLog,
     DB_PATH, Base
 )
-from src.styles import apply_dark_theme, COLORS
+from src.styles import apply_dark_theme, COLORS, page_header, apply_plotly_theme
 from sqlalchemy import create_engine, func
 from sqlalchemy.orm import sessionmaker
 import yfinance as yf
@@ -137,10 +137,7 @@ def render_dashboard():
         summary = get_portfolio_summary(session)
 
         # Header
-        st.markdown("""
-        <h1 style="font-size: 2rem; margin-bottom: 0.5rem;">Wealth Dashboard</h1>
-        <p style="color: #888; margin-bottom: 2rem;">Family Office Wealth OS</p>
-        """, unsafe_allow_html=True)
+        page_header("Wealth Dashboard", "Family Office Wealth OS")
 
         # Top metrics
         col1, col2, col3, col4 = st.columns(4)
@@ -1180,7 +1177,7 @@ def render_market_data():
                         with col2:
                             st.write(f"${data['price']:.2f}")
                         with col3:
-                            color = "green" if data['change'] >= 0 else "red"
+                            color = COLORS['success'] if data['change'] >= 0 else COLORS['danger']
                             st.markdown(f"<span style='color:{color}'>{data['change']:+.2f} ({data['change_pct']:+.2f}%)</span>", unsafe_allow_html=True)
         else:
             st.info("No public equities with symbols found.")

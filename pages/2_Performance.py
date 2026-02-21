@@ -163,7 +163,7 @@ try:
     # Create bar chart
     fig = go.Figure()
 
-    colors = ['green' if x >= 0 else 'red' for x in df_ac_perf['Return (%)']]
+    colors = [COLORS['success'] if x >= 0 else COLORS['danger'] for x in df_ac_perf['Return (%)']]
 
     fig.add_trace(go.Bar(
         x=df_ac_perf['Asset Class'],

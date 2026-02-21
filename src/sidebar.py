@@ -5,6 +5,7 @@ Displayed on all pages except Settings.
 
 import streamlit as st
 from datetime import datetime
+from src.styles import COLORS
 
 try:
     import yfinance as yf
@@ -89,8 +90,8 @@ def render_sidebar():
     """Render shared sidebar with exchange rates and market indices."""
     with st.sidebar:
         st.markdown(
-            "<p style='color: #666; font-size: 0.75rem; text-transform: uppercase; "
-            "letter-spacing: 0.05em;'>Exchange Rates</p>",
+            f"<p style='color: {COLORS['text_muted']}; font-size: 0.75rem; text-transform: uppercase; "
+            "letter-spacing: 0.06em; font-weight: 500;'>Exchange Rates</p>",
             unsafe_allow_html=True
         )
 
@@ -104,8 +105,8 @@ def render_sidebar():
         st.markdown("---")
 
         st.markdown(
-            "<p style='color: #666; font-size: 0.75rem; text-transform: uppercase; "
-            "letter-spacing: 0.05em;'>Major Indices</p>",
+            f"<p style='color: {COLORS['text_muted']}; font-size: 0.75rem; text-transform: uppercase; "
+            "letter-spacing: 0.06em; font-weight: 500;'>Major Indices</p>",
             unsafe_allow_html=True
         )
 
