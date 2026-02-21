@@ -324,12 +324,33 @@ def apply_dark_theme():
         background: {COLORS['accent']} !important;
     }}
 
-    /* Sidebar nav items */
+    /* Sidebar nav - consistent spacing and no animations */
+    [data-testid="stSidebarNav"] {{
+        padding-bottom: 0.5rem !important;
+    }}
+
+    [data-testid="stSidebarNav"] ul {{
+        gap: 0 !important;
+        padding: 0 !important;
+    }}
+
+    [data-testid="stSidebarNav"] li {{
+        margin: 0 !important;
+        padding: 0 !important;
+    }}
+
     [data-testid="stSidebarNav"] a {{
         color: {COLORS['text_secondary']} !important;
-        padding: 0.75rem 1rem !important;
-        border-radius: 8px !important;
-        transition: all 0.2s ease !important;
+        padding: 0.4rem 0.75rem !important;
+        border-radius: 6px !important;
+        transition: none !important;
+        margin: 0 !important;
+        min-height: unset !important;
+        line-height: 1.4 !important;
+    }}
+
+    [data-testid="stSidebarNav"] a span {{
+        transition: none !important;
     }}
 
     [data-testid="stSidebarNav"] a:hover {{

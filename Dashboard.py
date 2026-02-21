@@ -19,6 +19,7 @@ from src.models import (
     RealEstateProperty, FXRateSnapshot, CashflowItem, ActivityLog,
     DB_PATH, Base
 )
+from src.styles import apply_dark_theme, COLORS
 from sqlalchemy import create_engine, func
 from sqlalchemy.orm import sessionmaker
 import yfinance as yf
@@ -32,6 +33,9 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
+# Apply shared dark theme (same as all other pages)
+apply_dark_theme()
+
 # Database connection
 @st.cache_resource
 def get_engine():
@@ -41,103 +45,6 @@ def get_session():
     engine = get_engine()
     Session = sessionmaker(bind=engine)
     return Session()
-
-# Dark theme color palette
-COLORS = {
-    'bg_primary': '#000000',
-    'bg_secondary': '#0a0a0a',
-    'bg_card': '#111111',
-    'bg_card_hover': '#1a1a1a',
-    'border': '#1f1f1f',
-    'border_light': '#2a2a2a',
-    'text_primary': '#ffffff',
-    'text_secondary': '#a0a0a0',
-    'text_muted': '#666666',
-    'accent': '#ff5733',
-    'accent_light': '#ff6b47',
-    'success': '#00d26a',
-    'success_bg': 'rgba(0, 210, 106, 0.1)',
-    'danger': '#ff4757',
-    'danger_bg': 'rgba(255, 71, 87, 0.1)',
-    'warning': '#ffa502',
-    'chart_colors': ['#ff5733', '#3498db', '#2ecc71', '#9b59b6', '#f39c12', '#1abc9c', '#e74c3c', '#00d2d3']
-}
-
-# Premium Dark Theme CSS
-st.markdown(f"""
-<style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-
-    .stApp {{
-        background: {COLORS['bg_primary']};
-        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-    }}
-
-    .main .block-container {{
-        padding: 2rem 3rem;
-        max-width: 100%;
-    }}
-
-    section[data-testid="stSidebar"] {{
-        background: {COLORS['bg_secondary']};
-        border-right: 1px solid {COLORS['border']};
-    }}
-
-    h1, h2, h3 {{
-        color: {COLORS['text_primary']} !important;
-        font-weight: 600 !important;
-    }}
-
-    [data-testid="stMetric"] {{
-        background: {COLORS['bg_card']};
-        border: 1px solid {COLORS['border']};
-        border-radius: 12px;
-        padding: 1.25rem;
-    }}
-
-    [data-testid="stMetric"] label {{
-        color: {COLORS['text_secondary']} !important;
-        font-size: 0.85rem !important;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-    }}
-
-    [data-testid="stMetric"] [data-testid="stMetricValue"] {{
-        color: {COLORS['text_primary']} !important;
-        font-size: 1.75rem !important;
-        font-weight: 600 !important;
-    }}
-
-    .stButton > button {{
-        background: {COLORS['accent']} !important;
-        color: white !important;
-        border: none !important;
-        border-radius: 8px !important;
-        font-weight: 500 !important;
-    }}
-
-    .stDataFrame {{
-        border: 1px solid {COLORS['border']} !important;
-        border-radius: 12px !important;
-    }}
-
-    .stTabs [data-baseweb="tab"] {{
-        background: {COLORS['bg_card']} !important;
-        border: 1px solid {COLORS['border']} !important;
-        border-radius: 8px !important;
-        color: {COLORS['text_secondary']} !important;
-    }}
-
-    .stTabs [aria-selected="true"] {{
-        background: {COLORS['accent']} !important;
-        color: white !important;
-    }}
-
-    .freshness-fresh {{ color: {COLORS['success']}; }}
-    .freshness-aging {{ color: {COLORS['warning']}; }}
-    .freshness-stale {{ color: {COLORS['danger']}; }}
-</style>
-""", unsafe_allow_html=True)
 
 
 def format_currency(value, currency='CAD'):
@@ -1310,65 +1217,9 @@ def get_fx_rate(from_currency, to_currency):
     return None
 
 
-@st.cache_data(ttl=900, show_spinner=False)
-def _cached_sidebar_fx():
-    """Get FX rates for sidebar, cached for 15 minutes."""
-    usd_cad = get_fx_rate('USD', 'CAD')
-    eur_cad = get_fx_rate('EUR', 'CAD')
-    return {'usd_cad': usd_cad, 'eur_cad': eur_cad}
-
-
-@st.cache_data(ttl=900, show_spinner=False)
-def _cached_sidebar_indices():
-    """Get market indices for sidebar, cached for 15 minutes."""
-    indices = {
-        'S&P 500': '^GSPC',
-        'NASDAQ': '^IXIC',
-        'Dow Jones': '^DJI',
-        'TSX': '^GSPTSE',
-        'Gold (USD)': 'GC=F',
-        'Bitcoin (USD)': 'BTC-USD'
-    }
-    results = {}
-    for name, symbol in indices.items():
-        data = get_stock_price(symbol)
-        if data:
-            results[name] = data
-    return {'data': results, 'timestamp': datetime.now().strftime('%H:%M')}
-
-
-def render_sidebar():
-    """Render sidebar navigation."""
-    with st.sidebar:
-        # Exchange Rates at top - full width, stacked
-        st.markdown("<p style='color: #666; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em;'>Exchange Rates</p>", unsafe_allow_html=True)
-
-        fx_data = _cached_sidebar_fx()
-
-        if fx_data['usd_cad']:
-            st.metric("USD/CAD", f"{fx_data['usd_cad']:.4f}")
-        if fx_data['eur_cad']:
-            st.metric("EUR/CAD", f"{fx_data['eur_cad']:.4f}")
-
-        st.markdown("---")
-
-        # Major Indices - full width, stacked
-        st.markdown("<p style='color: #666; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em;'>Major Indices</p>", unsafe_allow_html=True)
-
-        indices_data = _cached_sidebar_indices()
-
-        for name, data in indices_data['data'].items():
-            st.metric(
-                name,
-                f"{data['price']:,.0f}",
-                delta=f"{data['change_pct']:+.2f}%"
-            )
-
-        st.caption(f"Updated: {indices_data['timestamp']}")
-
-
 def main():
     """Main application entry point."""
+    from src.sidebar import render_sidebar
     render_sidebar()
     render_dashboard()
 

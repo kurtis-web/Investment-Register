@@ -25,9 +25,12 @@ from src.ai_advisor import (
 from src.portfolio import get_portfolio_overview
 from src.styles import apply_dark_theme, COLORS, apply_plotly_theme, page_header, section_header
 
-st.set_page_config(page_title="Risk Register | Investment Register", page_icon="\U0001f6e1\ufe0f", layout="wide")
+st.set_page_config(page_title="Risk Register | Investment Register", page_icon="\U0001f6e1\ufe0f", layout="wide", initial_sidebar_state="expanded")
 
 apply_dark_theme()
+
+from src.sidebar import render_sidebar
+render_sidebar()
 
 page_header("Risk Register", "Risk identification, assessment, and monitoring")
 

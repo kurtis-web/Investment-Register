@@ -18,10 +18,13 @@ from src.market_data import get_benchmark_data, get_benchmark_returns
 from src.calculations import format_currency, format_percentage, calculate_performance_attribution
 from src.styles import apply_dark_theme, COLORS, PLOTLY_LAYOUT, page_header, section_header
 
-st.set_page_config(page_title="Performance | Investment Register", page_icon="📊", layout="wide")
+st.set_page_config(page_title="Performance | Investment Register", page_icon="📊", layout="wide", initial_sidebar_state="expanded")
 
 # Apply dark theme
 apply_dark_theme()
+
+from src.sidebar import render_sidebar
+render_sidebar()
 
 page_header("Performance", "Returns, benchmarks, and performance attribution")
 

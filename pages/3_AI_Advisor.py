@@ -20,10 +20,13 @@ from src.ai_advisor import (
 from src.calculations import format_currency
 from src.styles import apply_dark_theme, COLORS, PLOTLY_LAYOUT, page_header, section_header
 
-st.set_page_config(page_title="AI Advisor | Investment Register", page_icon="🤖", layout="wide")
+st.set_page_config(page_title="AI Advisor | Investment Register", page_icon="🤖", layout="wide", initial_sidebar_state="expanded")
 
 # Apply dark theme
 apply_dark_theme()
+
+from src.sidebar import render_sidebar
+render_sidebar()
 
 page_header("AI Investment Advisor", "AI-powered recommendations and analysis")
 

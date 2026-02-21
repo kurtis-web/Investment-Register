@@ -17,10 +17,13 @@ from src.ai_advisor import is_ai_available, get_scenario_analysis
 from src.calculations import format_currency
 from src.styles import apply_dark_theme, COLORS, PLOTLY_LAYOUT, page_header, section_header
 
-st.set_page_config(page_title="Scenarios | Investment Register", page_icon="🔮", layout="wide")
+st.set_page_config(page_title="Scenarios | Investment Register", page_icon="🔮", layout="wide", initial_sidebar_state="expanded")
 
 # Apply dark theme
 apply_dark_theme()
+
+from src.sidebar import render_sidebar
+render_sidebar()
 
 page_header("Scenario Analysis", "What-if analysis and stress testing")
 

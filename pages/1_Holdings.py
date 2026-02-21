@@ -23,10 +23,13 @@ from src.calculations import format_currency, format_percentage
 from src.styles import apply_dark_theme, COLORS, PLOTLY_LAYOUT, page_header, section_header
 from src.importers import GoogleSheetsImporter
 
-st.set_page_config(page_title="Holdings | Investment Register", page_icon="📈", layout="wide")
+st.set_page_config(page_title="Holdings | Investment Register", page_icon="📈", layout="wide", initial_sidebar_state="expanded")
 
 # Apply dark theme
 apply_dark_theme()
+
+from src.sidebar import render_sidebar
+render_sidebar()
 
 page_header("Holdings", "Detailed view of all investment positions")
 
